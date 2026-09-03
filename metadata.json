@@ -1,0 +1,7 @@
+{
+  "name": "Advanced Invoice & Business Management System",
+  "description": "Production-ready enterprise invoice, client, product, offers, and business management platform with live invoice designer, PDF generator, email system, and financial analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
