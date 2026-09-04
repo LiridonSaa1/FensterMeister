@@ -29,8 +29,28 @@ import {
 } from '../services/brevoService';
 import { generateDocumentEmail } from '../utils/emailTemplateGenerator';
 import { Language, Translations, translations } from '../i18n/translations';
+import { isSupabaseConfigured, getSupabaseClient } from '../lib/supabase';
+import {
+  fetchClientsFromSupabase,
+  saveClientToSupabase,
+  deleteClientFromSupabase,
+  fetchProductsFromSupabase,
+  saveProductToSupabase,
+  deleteProductFromSupabase,
+  fetchInvoicesFromSupabase,
+  saveInvoiceToSupabase,
+  deleteInvoiceFromSupabase,
+  fetchOffersFromSupabase,
+  saveOfferToSupabase,
+  deleteOfferFromSupabase,
+  fetchPaymentsFromSupabase,
+  savePaymentToSupabase,
+  fetchBusinessProfileFromSupabase,
+  saveBusinessProfileToSupabase,
+} from '../services/supabaseService';
 
 interface AppContextType {
+  supabaseConnected: boolean;
   // Localization
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -125,7 +145,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'apex_invoice_mgmt_v1';
+const LOCAL_STORAGE_KEY = 'fenstermeister_invoice_v2';
+const SAMPLE_IDS = new Set(['cli-001', 'cli-002', 'cli-003', 'cli-004', 'cli-005', 'inv-1045', 'inv-1046', 'inv-1047', 'inv-1048', 'off-1021', 'off-1022', 'off-1023', 'pay-001', 'pay-002']);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Navigation State
@@ -207,6 +228,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]
   );
 
+  // Supabase Hydration State
+  const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    const hydrateFromSupabase = async () => {
+      try {
+        const [sbClients, sbProducts, sbInvoices, sbOffers, sbPayments, sbProfile] = await Promise.all([
+          fetchClientsFromSupabase(),
+          fetchProductsFromSupabase(),
+          fetchInvoicesFromSupabase(),
+          fetchOffersFromSupabase(),
+          fetchPaymentsFromSupabase(),
+          fetchBusinessProfileFromSupabase(),
+        ]);
+
+        // Products & 30 House Window Types Seeding
+        await Promise.all(initialProducts.map((p) => saveProductToSupabase(p)));
+        setProducts(initialProducts);
+
+        // Clients Seeding
+        const cleanClients = (sbClients || []).filter((c) => !SAMPLE_IDS.has(c.id));
+        setClients(cleanClients);
+
+        // Invoices Seeding
+        const cleanInvoices = (sbInvoices || []).filter((inv) => !SAMPLE_IDS.has(inv.id));
+        setInvoices(cleanInvoices);
+
+        // Offers Seeding
+        const cleanOffers = (sbOffers || []).filter((off) => !SAMPLE_IDS.has(off.id));
+        setOffers(cleanOffers);
+
+        // Payments Seeding
+        const cleanPayments = (sbPayments || []).filter((pay) => !SAMPLE_IDS.has(pay.id));
+        setPayments(cleanPayments);
+
+        // Business Profile Seeding
+        if (!sbProfile) {
+          await saveBusinessProfileToSupabase(initialBusinessProfile);
+          setBusinessProfile(initialBusinessProfile);
+        } else {
+          setBusinessProfile(sbProfile);
+        }
+
+        setSupabaseConnected(true);
+      } catch (err) {
+        console.warn('[Supabase Sync] Hydration failed, using LocalStorage fallback:', err);
+      }
+    };
+
+    hydrateFromSupabase();
+  }, []);
+
   // Sync state to local storage
   useEffect(() => {
     try {
@@ -239,7 +314,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Business Profile Actions
   const updateBusinessProfile = (profile: Partial<BusinessProfile>) => {
-    setBusinessProfile((prev) => ({ ...prev, ...profile }));
+    setBusinessProfile((prev) => {
+      const updated = { ...prev, ...profile };
+      saveBusinessProfileToSupabase(updated);
+      return updated;
+    });
     showToast('Business profile updated successfully!');
   };
 
@@ -251,6 +330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setClients((prev) => [newClient, ...prev]);
+    saveClientToSupabase(newClient);
     addActivityLog({
       type: 'client_added',
       title: 'New Client Added',
@@ -264,7 +344,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateClient = (id: string, updatedData: Partial<Client>) => {
     setClients((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updatedData, updatedAt: new Date().toISOString() } : c))
+      prev.map((c) => {
+        if (c.id === id) {
+          const updated = { ...c, ...updatedData, updatedAt: new Date().toISOString() };
+          saveClientToSupabase(updated);
+          return updated;
+        }
+        return c;
+      })
     );
     // Also update snapshot on draft/unpaid invoices if applicable
     setInvoices((prev) =>
@@ -285,6 +372,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
     setClients((prev) => prev.filter((c) => c.id !== id));
+    deleteClientFromSupabase(id);
     showToast('Client removed successfully.');
     return true;
   };
@@ -296,7 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newClients: Client[] = [];
     imported.forEach((raw) => {
       if (raw.name || raw.companyName) {
-        newClients.push({
+        const clientItem: Client = {
           id: `cli-${Date.now().toString().slice(-4)}-${count}`,
           name: raw.name || raw.companyName || 'New Client',
           companyName: raw.companyName || '',
@@ -310,7 +398,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           notes: raw.notes || 'Imported from CSV/Excel',
           type: raw.type === 'individual' ? 'individual' : 'business',
           createdAt: new Date().toISOString(),
-        });
+        };
+        newClients.push(clientItem);
+        saveClientToSupabase(clientItem);
         count++;
       }
     });
@@ -330,6 +420,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setProducts((prev) => [newProd, ...prev]);
+    saveProductToSupabase(newProd);
     addActivityLog({
       type: 'product_added',
       title: 'New Product/Service Added',
@@ -342,12 +433,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProduct = (id: string, updatedData: Partial<Product>) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updatedData } : p)));
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          const updated = { ...p, ...updatedData };
+          saveProductToSupabase(updated);
+          return updated;
+        }
+        return p;
+      })
+    );
     showToast('Product updated successfully.');
   };
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
+    deleteProductFromSupabase(id);
     showToast('Product removed.');
   };
 
@@ -380,12 +481,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setInvoices((prev) => [newInvoice, ...prev]);
+    saveInvoiceToSupabase(newInvoice);
 
     // Increment next invoice number in profile
-    setBusinessProfile((prev) => ({
-      ...prev,
-      nextInvoiceNumber: nextNum + 1,
-    }));
+    setBusinessProfile((prev) => {
+      const updated = { ...prev, nextInvoiceNumber: nextNum + 1 };
+      saveBusinessProfileToSupabase(updated);
+      return updated;
+    });
 
     addActivityLog({
       type: 'invoice_created',
@@ -405,6 +508,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((inv) => {
         if (inv.id === id) {
           const updated = { ...inv, ...updatedData, updatedAt: new Date().toISOString() };
+          saveInvoiceToSupabase(updated);
           return updated;
         }
         return inv;
@@ -415,6 +519,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteInvoice = (id: string) => {
     setInvoices((prev) => prev.filter((i) => i.id !== id));
+    deleteInvoiceFromSupabase(id);
     showToast('Invoice deleted.');
   };
 
@@ -445,10 +550,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setInvoices((prev) => [newInvoice, ...prev]);
-    setBusinessProfile((prev) => ({
-      ...prev,
-      nextInvoiceNumber: nextNum + 1,
-    }));
+    saveInvoiceToSupabase(newInvoice);
+    setBusinessProfile((prev) => {
+      const updated = { ...prev, nextInvoiceNumber: nextNum + 1 };
+      saveBusinessProfileToSupabase(updated);
+      return updated;
+    });
 
     showToast(`Duplicated into new draft invoice #${newInvoice.prefix}${newInvoice.number}`);
     return newInvoice;
@@ -460,11 +567,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setInvoices((prev) =>
       prev.map((inv) => {
         if (inv.id === id) {
-          return {
+          const updated: Invoice = {
             ...inv,
             status,
             paidAt: status === 'paid' ? new Date().toISOString() : inv.paidAt,
           };
+          saveInvoiceToSupabase(updated);
+          return updated;
         }
         return inv;
       })
@@ -486,10 +595,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setOffers((prev) => [newOffer, ...prev]);
-    setBusinessProfile((prev) => ({
-      ...prev,
-      nextOfferNumber: nextNum + 1,
-    }));
+    saveOfferToSupabase(newOffer);
+    setBusinessProfile((prev) => {
+      const updated = { ...prev, nextOfferNumber: nextNum + 1 };
+      saveBusinessProfileToSupabase(updated);
+      return updated;
+    });
 
     addActivityLog({
       type: 'offer_created',
@@ -505,12 +616,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateOffer = (id: string, updatedData: Partial<Offer>) => {
-    setOffers((prev) => prev.map((o) => (o.id === id ? { ...o, ...updatedData, updatedAt: new Date().toISOString() } : o)));
+    setOffers((prev) =>
+      prev.map((o) => {
+        if (o.id === id) {
+          const updated = { ...o, ...updatedData, updatedAt: new Date().toISOString() };
+          saveOfferToSupabase(updated);
+          return updated;
+        }
+        return o;
+      })
+    );
     showToast('Offer updated successfully.');
   };
 
   const deleteOffer = (id: string) => {
     setOffers((prev) => prev.filter((o) => o.id !== id));
+    deleteOfferFromSupabase(id);
     showToast('Offer removed.');
   };
 
@@ -580,26 +701,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update Offer Status
     setOffers((prev) =>
-      prev.map((o) =>
-        o.id === offerId
-          ? {
-              ...o,
-              status: 'converted',
-              convertedInvoiceId: invId,
-              convertedAt: new Date().toISOString(),
-            }
-          : o
-      )
+      prev.map((o) => {
+        if (o.id === offerId) {
+          const updated: Offer = {
+            ...o,
+            status: 'converted',
+            convertedInvoiceId: invId,
+            convertedAt: new Date().toISOString(),
+          };
+          saveOfferToSupabase(updated);
+          return updated;
+        }
+        return o;
+      })
     );
 
     // Save new invoice
     setInvoices((prev) => [newInvoice, ...prev]);
+    saveInvoiceToSupabase(newInvoice);
 
     // Increment invoice sequence
-    setBusinessProfile((prev) => ({
-      ...prev,
-      nextInvoiceNumber: nextNum + 1,
-    }));
+    setBusinessProfile((prev) => {
+      const updated = { ...prev, nextInvoiceNumber: nextNum + 1 };
+      saveBusinessProfileToSupabase(updated);
+      return updated;
+    });
 
     addActivityLog({
       type: 'offer_converted',
@@ -623,6 +749,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setPayments((prev) => [newPayment, ...prev]);
+    savePaymentToSupabase(newPayment);
 
     // Update target invoice paid amount & status
     setInvoices((prev) =>
@@ -632,7 +759,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const updatedDue = Math.max(0, inv.total - updatedPaid);
           const newStatus: Invoice['status'] = updatedDue <= 0.01 ? 'paid' : 'unpaid';
 
-          return {
+          const updatedInvoice: Invoice = {
             ...inv,
             amountPaid: updatedPaid,
             amountDue: updatedDue,
@@ -650,9 +777,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 entityType: 'payment',
                 amount: paymentData.amount,
               },
-              ...inv.history,
+              ...(inv.history || []),
             ],
           };
+          saveInvoiceToSupabase(updatedInvoice);
+          return updatedInvoice;
         }
         return inv;
       })
@@ -876,12 +1005,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: `act-${Date.now()}`,
         type: 'invoice_created',
         title: 'System Data Reset',
-        description: 'Demo business records restored.',
+        description: 'System reset to clean default state with 30 house window types.',
         timestamp: new Date().toISOString(),
       },
     ]);
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    showToast('Reset system to default sample business data.');
+
+    // Sync reset to Supabase if connected
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        Promise.all([
+          supabase.from('clients').delete().neq('id', ''),
+          supabase.from('invoices').delete().neq('id', ''),
+          supabase.from('offers').delete().neq('id', ''),
+          supabase.from('payments').delete().neq('id', ''),
+          supabase.from('products').delete().neq('id', ''),
+        ]).then(() => {
+          initialProducts.forEach((p) => saveProductToSupabase(p));
+          saveBusinessProfileToSupabase(initialBusinessProfile);
+        });
+      }
+    }
+
+    showToast('Cleared all data. Restored 30 house window types default catalog.');
   };
 
   const exportAllData = (): string => {
@@ -924,6 +1071,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        supabaseConnected,
         language,
         setLanguage,
         t,

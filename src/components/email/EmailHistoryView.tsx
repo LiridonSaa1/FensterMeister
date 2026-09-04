@@ -26,6 +26,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { EmailLog } from '../../types';
 import { formatDate } from '../../utils/formatters';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { sendBrevoTestEmail, verifyBrevoApiKey } from '../../services/brevoService';
 
 export const EmailHistoryView: React.FC = () => {
@@ -52,6 +53,7 @@ export const EmailHistoryView: React.FC = () => {
   const [isTestEmailModalOpen, setIsTestEmailModalOpen] = useState(false);
   const [testRecipient, setTestRecipient] = useState(businessProfile.email || 'test@example.com');
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
 
   // Safe filtering logic
   const filteredLogs = emailLogs.filter((l) => {
@@ -161,7 +163,7 @@ export const EmailHistoryView: React.FC = () => {
   const isBrevoConfigured = brevoStatus?.configured || (businessProfile.brevoApiKey && businessProfile.brevoApiKey.length > 5);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-8xl mx-auto pb-16">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -349,7 +351,7 @@ export const EmailHistoryView: React.FC = () => {
                 filterType === 'offer' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Quotations
+              Offers
             </button>
           </div>
 
@@ -366,11 +368,7 @@ export const EmailHistoryView: React.FC = () => {
 
           {emailLogs.length > 0 && (
             <button
-              onClick={() => {
-                if (confirm('Are you sure you want to clear all dispatch history logs?')) {
-                  clearAllEmailLogs();
-                }
-              }}
+              onClick={() => setIsConfirmClearOpen(true)}
               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
               title="Clear all email logs"
             >
@@ -758,6 +756,21 @@ export const EmailHistoryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal for Clearing Email Logs */}
+      <ConfirmModal
+        isOpen={isConfirmClearOpen}
+        title="Clear Dispatch History"
+        message="Are you sure you want to clear all dispatch history logs? This action cannot be undone."
+        confirmText="Clear History"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          clearAllEmailLogs();
+          setIsConfirmClearOpen(false);
+        }}
+        onCancel={() => setIsConfirmClearOpen(false)}
+      />
     </div>
   );
 };

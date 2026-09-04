@@ -9,12 +9,13 @@ import { ClientManagementView } from './components/clients/ClientManagementView'
 import { ProductManagementView } from './components/products/ProductManagementView';
 import { WindowTypesView } from './components/windows/WindowTypesView';
 import { OffersManagementView } from './components/offers/OffersManagementView';
+import { OfferBuilderView } from './components/offers/OfferBuilderView';
 import { PaymentsView } from './components/payments/PaymentsView';
 import { EmailHistoryView } from './components/email/EmailHistoryView';
 import { SettingsView } from './components/settings/SettingsView';
 
 const MainContent: React.FC = () => {
-  const { currentTab, selectedInvoiceId } = useApp();
+  const { currentTab, selectedInvoiceId, selectedOfferId } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -39,6 +40,7 @@ const MainContent: React.FC = () => {
           {currentTab === 'products' && <ProductManagementView />}
           {currentTab === 'windows' && <WindowTypesView />}
           {currentTab === 'offers' && <OffersManagementView />}
+          {(currentTab === 'offer_create' || currentTab === 'offer_edit') && <OfferBuilderView editOfferId={selectedOfferId} />}
           {currentTab === 'payments' && <PaymentsView />}
           {currentTab === 'email_history' && <EmailHistoryView />}
           {currentTab === 'settings' && <SettingsView />}

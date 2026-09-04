@@ -40,6 +40,7 @@ import { Product, ProductType, ProductStatus } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { HOUSE_WINDOW_TYPES, convertWindowToProduct, HouseWindowSpec } from '../../data/houseWindowsData';
 import { WINDOW_SVG_COMPONENTS } from '../windows/WindowSvgIcons';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 export const ProductManagementView: React.FC = () => {
   const {
@@ -86,6 +87,9 @@ export const ProductManagementView: React.FC = () => {
 
   // Detail Overview Inspector Drawer
   const [inspectingProduct, setInspectingProduct] = useState<Product | null>(null);
+
+  // Custom Delete Confirm Modal State
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   // Form State for Full Product Editor
   const [formName, setFormName] = useState('');
@@ -415,7 +419,7 @@ export const ProductManagementView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-8xl mx-auto pb-16">
       {/* Toast Alert */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-5">
@@ -786,12 +790,7 @@ export const ProductManagementView: React.FC = () => {
 
                             {/* Delete button */}
                             <button
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to remove "${p.name}"?`)) {
-                                  deleteProduct(p.id);
-                                  showToast(`Removed ${p.name}`);
-                                }
-                              }}
+                              onClick={() => setProductToDelete(p)}
                               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
                               title="Delete Item"
                             >
@@ -1682,6 +1681,23 @@ export const ProductManagementView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modern Custom Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(productToDelete)}
+        title="Remove Product"
+        message={productToDelete ? `Are you sure you want to remove "${productToDelete.name}" from your catalog?` : ''}
+        confirmText="Remove Product"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (productToDelete) {
+            deleteProduct(productToDelete.id);
+            setProductToDelete(null);
+          }
+        }}
+        onCancel={() => setProductToDelete(null)}
+      />
     </div>
   );
 };

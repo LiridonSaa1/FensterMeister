@@ -1,4 +1,5 @@
 import { BusinessProfile, Invoice, Offer, EmailTemplateKey } from '../types';
+import { Language } from '../i18n/translations';
 import { formatCurrency, formatDate } from './formatters';
 
 export interface GeneratedEmail {
@@ -11,20 +12,25 @@ export function generateDocumentEmail(
   doc: Invoice | Offer,
   business: BusinessProfile,
   templateKey: EmailTemplateKey = 'invoice_sent',
-  customMessage?: string
+  customMessage?: string,
+  lang: Language = 'en'
 ): GeneratedEmail {
   const isInvoice = 'dueDate' in doc;
   const isOffer = !isInvoice;
   const invoice = isInvoice ? (doc as Invoice) : undefined;
   const offer = isOffer ? (doc as Offer) : undefined;
+  const isDe = lang === 'de';
 
-  const docTypeLabel = isInvoice ? 'Invoice' : 'Quotation Proposal';
+  const docTypeLabel = isInvoice
+    ? (isDe ? 'Rechnung' : 'Invoice')
+    : (isDe ? 'Angebot' : 'Offer Proposal');
+
   const docNumber = isInvoice
     ? `${invoice?.prefix || ''}${invoice?.number}`
     : `${business.offerPrefix || 'OFF-'}${offer?.number}`;
 
   const client = doc.clientSnapshot;
-  const currency = doc.currency || business.defaultCurrency || 'USD';
+  const currency = doc.currency || business.defaultCurrency || 'EUR';
   const totalFormatted = formatCurrency(doc.total, currency);
   const amountDueFormatted = invoice
     ? formatCurrency(invoice.amountDue, currency)
@@ -36,25 +42,37 @@ export function generateDocumentEmail(
   let subject = '';
   switch (templateKey) {
     case 'invoice_sent':
-      subject = `Invoice #${docNumber} from ${business.businessName}`;
+      subject = isDe
+        ? `Rechnung #${docNumber} von ${business.businessName}`
+        : `Invoice #${docNumber} from ${business.businessName}`;
       break;
     case 'payment_reminder':
-      subject = `Friendly Reminder: Invoice #${docNumber} is Due Soon`;
+      subject = isDe
+        ? `Erinnerung: Rechnung #${docNumber} ist demnächst fällig`
+        : `Friendly Reminder: Invoice #${docNumber} is Due Soon`;
       break;
     case 'invoice_overdue':
-      subject = `URGENT: Overdue Notice for Invoice #${docNumber}`;
+      subject = isDe
+        ? `MAHNUNG: Überfällige Rechnung #${docNumber}`
+        : `URGENT: Overdue Notice for Invoice #${docNumber}`;
       break;
     case 'payment_received':
-      subject = `Payment Confirmation & Receipt for Invoice #${docNumber}`;
+      subject = isDe
+        ? `Zahlungsbestätigung für Rechnung #${docNumber}`
+        : `Payment Confirmation & Receipt for Invoice #${docNumber}`;
       break;
     case 'offer_sent':
-      subject = `Quotation & Proposal #${docNumber} from ${business.businessName}`;
+      subject = isDe
+        ? `Angebot #${docNumber} von ${business.businessName}`
+        : `Offer Proposal #${docNumber} from ${business.businessName}`;
       break;
     case 'offer_accepted':
-      subject = `Quotation #${docNumber} Accepted - Next Steps`;
+      subject = isDe
+        ? `Angebot #${docNumber} angenommen – Nächste Schritte`
+        : `Offer #${docNumber} Accepted - Next Steps`;
       break;
     default:
-      subject = `${docTypeLabel} #${docNumber} from ${business.businessName}`;
+      subject = `${docTypeLabel} #${docNumber} - ${business.businessName}`;
   }
 
   // Items rows
@@ -67,7 +85,7 @@ export function generateDocumentEmail(
           ${item.description ? `<br/><span style="font-size: 11px; color: #64748b;">${item.description}</span>` : ''}
         </td>
         <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; text-align: center;">
-          ${item.quantity} ${item.unit || 'pcs'}
+          ${item.quantity} ${item.unit || (isDe ? 'Stk' : 'pcs')}
         </td>
         <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; text-align: right;">
           ${formatCurrency(item.unitPrice, currency)}
@@ -86,7 +104,7 @@ export function generateDocumentEmail(
   // HTML Content
   const htmlContent = `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${isDe ? 'de' : 'en'}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -123,34 +141,39 @@ export function generateDocumentEmail(
     <!-- Body -->
     <div class="content">
       <p style="font-size: 14px; margin-top: 0; color: #334155;">
-        Dear <strong>${client.name}</strong>${client.companyName ? ` (${client.companyName})` : ''},
+        ${isDe ? 'Sehr geehrte(r)' : 'Dear'} <strong>${client.name}</strong>${client.companyName ? ` (${client.companyName})` : ''},
       </p>
 
       ${
         customMessage
           ? `<div style="font-size: 13.5px; line-height: 1.6; color: #334155; margin-bottom: 20px; white-space: pre-line;">${customMessage}</div>`
           : `<p style="font-size: 13.5px; line-height: 1.6; color: #334155; margin-bottom: 20px;">
-              Please find attached your ${docTypeLabel.toLowerCase()} <strong>#${docNumber}</strong> from <strong>${business.businessName}</strong>.
+              ${isDe ? `Anbei übersenden wir Ihnen Ihr ${docTypeLabel} <strong>#${docNumber}</strong> von <strong>${business.businessName}</strong>.` : `Please find attached your ${docTypeLabel.toLowerCase()} <strong>#${docNumber}</strong> from <strong>${business.businessName}</strong>.`}
             </p>`
       }
+
+      <!-- Attachment Banner -->
+      <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: #1e40af;">
+        📎 <strong>${isDe ? 'PDF-Anhang:' : 'PDF Attachment:'}</strong> ${isInvoice ? (isDe ? 'Rechnung' : 'Invoice') : (isDe ? 'Angebot' : 'Offer')}_${docNumber}.pdf
+      </div>
 
       <!-- Highlight Card -->
       <div class="highlight-card">
         <table style="width: 100%;">
           <tr>
-            <td style="font-size: 12px; color: #64748b;">Amount Due:</td>
+            <td style="font-size: 12px; color: #64748b;">${isDe ? 'Gesamtsumme / Betrag:' : 'Amount Due:'}</td>
             <td style="text-align: right; font-size: 20px; font-weight: 800; color: ${primaryColor};">
               ${amountDueFormatted}
             </td>
           </tr>
           <tr>
-            <td style="font-size: 12px; color: #64748b; padding-top: 6px;">Due Date:</td>
+            <td style="font-size: 12px; color: #64748b; padding-top: 6px;">${isInvoice ? (isDe ? 'Fällig am:' : 'Due Date:') : (isDe ? 'Gültig bis:' : 'Valid Until:')}</td>
             <td style="text-align: right; font-size: 13px; font-weight: 600; color: #334155; padding-top: 6px;">
               ${dueDate}
             </td>
           </tr>
           <tr>
-            <td style="font-size: 12px; color: #64748b; padding-top: 4px;">Issue Date:</td>
+            <td style="font-size: 12px; color: #64748b; padding-top: 4px;">${isDe ? 'Ausstellungsdatum:' : 'Issue Date:'}</td>
             <td style="text-align: right; font-size: 13px; color: #64748b; padding-top: 4px;">
               ${issueDate}
             </td>
@@ -160,15 +183,15 @@ export function generateDocumentEmail(
 
       <!-- Line Items Overview -->
       <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px;">
-        Document Summary (${doc.items.length} item${doc.items.length === 1 ? '' : 's'})
+        ${isDe ? `Positionen (${doc.items.length})` : `Document Summary (${doc.items.length} item${doc.items.length === 1 ? '' : 's'})`}
       </h3>
       <table class="table">
         <thead>
           <tr style="background-color: #f1f5f9; text-align: left; font-size: 11px; text-transform: uppercase; color: #475569;">
-            <th style="padding: 8px 12px;">Item / Description</th>
-            <th style="padding: 8px 12px; text-align: center;">Qty</th>
-            <th style="padding: 8px 12px; text-align: right;">Rate</th>
-            <th style="padding: 8px 12px; text-align: right;">Total</th>
+            <th style="padding: 8px 12px;">${isDe ? 'Position / Beschreibung' : 'Item / Description'}</th>
+            <th style="padding: 8px 12px; text-align: center;">${isDe ? 'Menge' : 'Qty'}</th>
+            <th style="padding: 8px 12px; text-align: right;">${isDe ? 'Einzelpreis' : 'Rate'}</th>
+            <th style="padding: 8px 12px; text-align: right;">${isDe ? 'Gesamt' : 'Total'}</th>
           </tr>
         </thead>
         <tbody>
@@ -176,33 +199,33 @@ export function generateDocumentEmail(
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="padding: 10px 12px; text-align: right; font-size: 12px; color: #64748b;">Subtotal:</td>
+            <td colspan="3" style="padding: 10px 12px; text-align: right; font-size: 12px; color: #64748b;">${isDe ? 'Zwischensumme:' : 'Subtotal:'}</td>
             <td style="padding: 10px 12px; text-align: right; font-size: 13px; font-weight: 600; color: #1e293b;">${formatCurrency(doc.subtotal, currency)}</td>
           </tr>
           ${
             doc.vatTotal > 0
               ? `<tr>
-                  <td colspan="3" style="padding: 4px 12px; text-align: right; font-size: 12px; color: #64748b;">VAT / Tax:</td>
+                  <td colspan="3" style="padding: 4px 12px; text-align: right; font-size: 12px; color: #64748b;">${isDe ? 'zzgl. MwSt.:' : 'VAT / Tax:'}</td>
                   <td style="padding: 4px 12px; text-align: right; font-size: 13px; color: #1e293b;">${formatCurrency(doc.vatTotal, currency)}</td>
                 </tr>`
               : ''
           }
           <tr>
-            <td colspan="3" style="padding: 10px 12px; text-align: right; font-size: 14px; font-weight: 700; color: #0f172a; border-top: 1px solid #e2e8f0;">Total:</td>
+            <td colspan="3" style="padding: 10px 12px; text-align: right; font-size: 14px; font-weight: 700; color: #0f172a; border-top: 1px solid #e2e8f0;">${isDe ? 'Gesamtsumme (Brutto):' : 'Total:'}</td>
             <td style="padding: 10px 12px; text-align: right; font-size: 16px; font-weight: 800; color: ${primaryColor}; border-top: 1px solid #e2e8f0;">${totalFormatted}</td>
           </tr>
         </tfoot>
       </table>
 
-      <!-- Payment Coordinates (if available) -->
+      <!-- Bank Coordinates -->
       ${
         business.iban || business.bankName
           ? `
         <div style="margin-top: 24px; padding: 16px 18px; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; font-size: 12px;">
-          <strong style="color: #0f172a; display: block; margin-bottom: 6px;">Remittance & Bank Coordinates:</strong>
-          ${business.bankName ? `<div>Bank Name: <strong>${business.bankName}</strong></div>` : ''}
+          <strong style="color: #0f172a; display: block; margin-bottom: 6px;">${isDe ? 'Bankverbindung & Überweisung:' : 'Remittance & Bank Coordinates:'}</strong>
+          ${business.bankName ? `<div>${isDe ? 'Bank:' : 'Bank Name:'} <strong>${business.bankName}</strong></div>` : ''}
           ${business.iban ? `<div>IBAN: <strong>${business.iban}</strong></div>` : ''}
-          ${business.swiftBic ? `<div>SWIFT / BIC: <strong>${business.swiftBic}</strong></div>` : ''}
+          ${business.swiftBic ? `<div>BIC / SWIFT: <strong>${business.swiftBic}</strong></div>` : ''}
         </div>
       `
           : ''
@@ -216,7 +239,7 @@ export function generateDocumentEmail(
         ${business.businessAddress ? `${business.businessAddress}, ` : ''}${business.city ? `${business.city}, ` : ''}${business.country || ''}
       </p>
       <p style="margin: 4px 0 0 0; opacity: 0.8;">
-        Email: ${business.email} ${business.phone ? `• Tel: ${business.phone}` : ''}
+        E-Mail: ${business.email} ${business.phone ? `• Tel: ${business.phone}` : ''}
       </p>
     </div>
   </div>
@@ -230,22 +253,22 @@ ${business.businessName}
 ${docTypeLabel} #${docNumber}
 ==================================================
 
-Dear ${client.name},
+${isDe ? 'Sehr geehrte(r)' : 'Dear'} ${client.name},
 
-${customMessage || `Please find attached your ${docTypeLabel.toLowerCase()} #${docNumber}.`}
+${customMessage || (isDe ? `Anbei übersenden wir Ihnen Ihr ${docTypeLabel} #${docNumber}.` : `Please find attached your ${docTypeLabel.toLowerCase()} #${docNumber}.`)}
 
-SUMMARY:
-- Total Amount: ${totalFormatted}
-- Amount Due: ${amountDueFormatted}
-- Issue Date: ${issueDate}
-- Due Date: ${dueDate}
+${isDe ? 'ZUSAMMENFASSUNG:' : 'SUMMARY:'}
+- ${isDe ? 'Gesamtsumme:' : 'Total Amount:'} ${totalFormatted}
+- ${isDe ? 'Offener Betrag:' : 'Amount Due:'} ${amountDueFormatted}
+- ${isDe ? 'Ausstellungsdatum:' : 'Issue Date:'} ${issueDate}
+- ${isDe ? (isInvoice ? 'Fällig am:' : 'Gültig bis:') : (isInvoice ? 'Due Date:' : 'Valid Until:')} ${dueDate}
 
-BANK DETAILS:
+${isDe ? 'BANKVERBINDUNG:' : 'BANK DETAILS:'}
 Bank: ${business.bankName || 'N/A'}
 IBAN: ${business.iban || 'N/A'}
-SWIFT/BIC: ${business.swiftBic || 'N/A'}
+BIC/SWIFT: ${business.swiftBic || 'N/A'}
 
-Contact: ${business.email} | ${business.phone}
+${isDe ? 'Kontakt:' : 'Contact:'} ${business.email} | ${business.phone}
 ==================================================
 `;
 

@@ -186,7 +186,7 @@ app.post('/api/brevo/send', async (req: Request, res: Response) => {
 
     if (attachment && Array.isArray(attachment) && attachment.length > 0) {
       brevoPayload.attachment = attachment.map((att: any) => ({
-        content: att.content, // base64 string
+        content: (att.content || '').replace(/^data:application\/pdf;base64,/, ''),
         name: att.name || 'document.pdf',
       }));
     }

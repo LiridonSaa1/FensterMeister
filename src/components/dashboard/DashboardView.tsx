@@ -115,7 +115,7 @@ export const DashboardView: React.FC = () => {
   const recentActivity = activityLogs.slice(0, 6);
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-8 space-y-6 max-w-8xl mx-auto">
       {/* Top Header Row with Title & Primary Action */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

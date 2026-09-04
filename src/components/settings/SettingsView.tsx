@@ -20,12 +20,15 @@ import {
   Sparkles,
   Globe,
   Languages,
+  Database,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useApp } from '../../context/AppContext';
 import { BusinessProfile, InvoiceTemplate } from '../../types';
 import { verifyBrevoApiKey, sendBrevoTestEmail } from '../../services/brevoService';
+import { testSupabaseConnection } from '../../services/supabaseService';
 import { Language } from '../../i18n/translations';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 export const SettingsView: React.FC = () => {
   const { businessProfile, updateBusinessProfile, resetToSampleData, brevoStatus, refreshBrevoStatus, showToast, language, setLanguage, t } = useApp();
@@ -47,8 +50,43 @@ export const SettingsView: React.FC = () => {
   const [testRecipient, setTestRecipient] = useState(formData.email || '');
   const [isSendingTest, setIsSendingTest] = useState(false);
 
+  // Supabase State
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => localStorage.getItem('apex_supabase_url') || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_URL || '' : ''));
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => localStorage.getItem('apex_supabase_anon_key') || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_ANON_KEY || '' : ''));
+  const [supabaseTestResult, setSupabaseTestResult] = useState<{ connected: boolean; message: string } | null>(null);
+  const [isTestingSupabase, setIsTestingSupabase] = useState<boolean>(false);
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState<boolean>(false);
+
+  const handleTestSupabase = async () => {
+    setIsTestingSupabase(true);
+    if (supabaseUrlInput) localStorage.setItem('apex_supabase_url', supabaseUrlInput);
+    if (supabaseKeyInput) localStorage.setItem('apex_supabase_anon_key', supabaseKeyInput);
+    const result = await testSupabaseConnection();
+    setSupabaseTestResult(result);
+    setIsTestingSupabase(false);
+  };
+
   const handleChange = (field: keyof BusinessProfile, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(language === 'de' ? 'Das Logo darf maximal 5 MB groß sein.' : 'Logo image must be under 5 MB.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        handleChange('logo', reader.result);
+        showToast(language === 'de' ? '✓ Logo hochgeladen! Speichern Sie Ihre Änderungen.' : '✓ Logo uploaded! Save settings to apply.', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleLanguageChange = (newLang: Language) => {
@@ -130,11 +168,7 @@ export const SettingsView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              if (confirm(language === 'de' ? 'Möchten Sie alle Daten auf die Standard-Beispieldaten zurücksetzen?' : 'Are you sure you want to reset all data back to clean sample data?')) {
-                resetToSampleData();
-              }
-            }}
+            onClick={() => setIsConfirmResetOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -218,6 +252,79 @@ export const SettingsView: React.FC = () => {
         {activeTab === 'profile' && (
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5 text-xs animate-in fade-in duration-150">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t.settings.sections.businessIdentity}</h3>
+
+            {/* Company Logo Upload Card */}
+            <div className="bg-slate-50 p-4.5 rounded-xl border border-slate-200/90 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    {language === 'de' ? 'Unternehmenslogo' : 'Company Logo'}
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    {language === 'de'
+                      ? 'Wird auf allen Rechnungen, Angeboten und Dokumenten angezeigt.'
+                      : 'Displayed on all invoices, proposals, and official documents.'}
+                  </p>
+                </div>
+
+                {formData.logo && (
+                  <button
+                    type="button"
+                    onClick={() => handleChange('logo', '')}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                  >
+                    {language === 'de' ? 'Logo entfernen' : 'Remove Logo'}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                {/* Preview Box */}
+                <div className="w-32 h-20 bg-white rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center p-2 shrink-0 overflow-hidden relative shadow-2xs">
+                  {formData.logo ? (
+                    <img
+                      src={formData.logo}
+                      alt="Company Logo"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="text-center text-slate-400">
+                      <Upload className="w-5 h-5 mx-auto mb-1 opacity-60" />
+                      <span className="text-[10px] block">{language === 'de' ? 'Kein Logo' : 'No Logo'}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Controls */}
+                <div className="flex-1 space-y-2 w-full">
+                  <div className="flex flex-wrap gap-2">
+                    <label className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-xs text-xs">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{language === 'de' ? 'Logo hochladen' : 'Upload Logo File'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {language === 'de' ? 'Oder Direkt-Bild-URL eingeben:' : 'Or enter direct Image URL:'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.logo || ''}
+                      onChange={(e) => handleChange('logo', e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
@@ -538,6 +645,19 @@ export const SettingsView: React.FC = () => {
                   <option value="minimal">{language === 'de' ? 'Minimal' : 'Minimal'}</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">{language === 'de' ? 'Logo-Ausrichtung auf Dokumenten' : 'Logo Position on Documents'}</label>
+                <select
+                  value={formData.logoPosition || 'left'}
+                  onChange={(e: any) => handleChange('logoPosition', e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="left">{language === 'de' ? 'Links (Standard)' : 'Left (Default)'}</option>
+                  <option value="center">{language === 'de' ? 'Zentriert' : 'Center'}</option>
+                  <option value="right">{language === 'de' ? 'Rechts' : 'Right'}</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -735,6 +855,90 @@ export const SettingsView: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Supabase Cloud Database Connection Card */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-200">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900">Supabase Cloud Database & Real-Time Sync</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        supabaseTestResult?.connected || (supabaseUrlInput && supabaseKeyInput)
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {supabaseTestResult?.connected ? 'Connected' : supabaseUrlInput ? 'Configured' : 'Offline / LocalStorage'}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 text-[11px] mt-0.5">
+                      {language === 'de'
+                        ? 'Verbinden Sie Ihre Supabase-Datenbank für Cloud-Speicherung, Echtzeit-Synchronisierung und Zugriff von mehreren Geräten.'
+                        : 'Connect your Supabase PostgreSQL project for persistent cloud storage, real-time sync, and multi-device access.'}
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href="https://supabase.com/dashboard"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800 underline"
+                >
+                  <span>Supabase Dashboard</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Supabase Project URL (VITE_SUPABASE_URL)
+                  </label>
+                  <input
+                    type="text"
+                    value={supabaseUrlInput}
+                    onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                    placeholder="https://your-project.supabase.co"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Supabase Anon Key (VITE_SUPABASE_ANON_KEY)
+                  </label>
+                  <input
+                    type="password"
+                    value={supabaseKeyInput}
+                    onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={handleTestSupabase}
+                  disabled={isTestingSupabase}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer disabled:opacity-50 transition-all"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  <span>{isTestingSupabase ? 'Testing Connection...' : 'Test & Save Supabase Connection'}</span>
+                </button>
+
+                {supabaseTestResult && (
+                  <span className={`text-xs font-semibold ${supabaseTestResult.connected ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {supabaseTestResult.message}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -844,7 +1048,7 @@ export const SettingsView: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-[11px]">
                   <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200/60">
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{language === 'de' ? 'Rechnungen & Angebote' : 'Invoices & Quotations'}</span>
+                    <span>{language === 'de' ? 'Rechnungen & Angebote' : 'Invoices & Offers'}</span>
                   </div>
                   <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200/60">
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -872,6 +1076,25 @@ export const SettingsView: React.FC = () => {
           </div>
         )}
       </form>
+
+      {/* Custom Confirmation Modal for Resetting Demo Data */}
+      <ConfirmModal
+        isOpen={isConfirmResetOpen}
+        title={language === 'de' ? 'Demo-Daten zurücksetzen' : 'Reset Demo Data'}
+        message={
+          language === 'de'
+            ? 'Möchten Sie alle Daten auf die Standard-Beispieldaten zurücksetzen? Alle ungespeicherten Änderungen gehen verloren.'
+            : 'Are you sure you want to reset all system data back to sample defaults? Any unsaved local edits will be reset.'
+        }
+        confirmText={language === 'de' ? 'Zurücksetzen' : 'Reset All Data'}
+        cancelText={language === 'de' ? 'Abbrechen' : 'Cancel'}
+        variant="warning"
+        onConfirm={() => {
+          resetToSampleData();
+          setIsConfirmResetOpen(false);
+        }}
+        onCancel={() => setIsConfirmResetOpen(false)}
+      />
     </div>
   );
 };

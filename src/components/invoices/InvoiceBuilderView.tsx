@@ -411,7 +411,7 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
   const colorPresets = ['#2563eb', '#0d9488', '#7c3aed', '#e11d48', '#d97706', '#0f172a', '#059669'];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-8xl mx-auto pb-16">
       {/* Top Action Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -730,14 +730,33 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
 
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                         <div className="sm:col-span-7">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Bezeichnung' : 'Item Name'}</label>
-                          <input
-                            type="text"
-                            value={item.name}
-                            onChange={(e) => handleItemChange(idx, 'name', e.target.value)}
-                            placeholder={language === 'de' ? 'Dienstleistung oder Artikelbeschreibung' : 'Service or product description'}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Produkt / Bezeichnung' : 'Product / Item Name'}</label>
+                          <select
+                            value={item.productId || products.find((p) => p.name.toLowerCase() === item.name.toLowerCase())?.id || ''}
+                            onChange={(e) => {
+                              const selectedId = e.target.value;
+                              if (!selectedId) return;
+                              const foundProduct = products.find((p) => p.id === selectedId);
+                              if (foundProduct) {
+                                handleItemChange(idx, 'productId', foundProduct.id);
+                                handleItemChange(idx, 'name', foundProduct.name);
+                                handleItemChange(idx, 'unitPrice', foundProduct.sellingPrice);
+                                handleItemChange(idx, 'vatRate', foundProduct.vatRate ?? businessProfile.defaultVatRate ?? 20);
+                                handleItemChange(idx, 'unit', foundProduct.unit || item.unit);
+                                if (foundProduct.image) handleItemChange(idx, 'image', foundProduct.image);
+                              }
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md font-bold text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                          >
+                            <option value="">
+                              {item.name ? item.name : (language === 'de' ? '📦 Produkt wählen...' : '📦 Select Product...')}
+                            </option>
+                            {products.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} ({formatCurrency(p.sellingPrice, currency)})
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="sm:col-span-2">
@@ -1052,11 +1071,13 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
 
             {/* Rendered Live Template */}
             <div className="overflow-x-auto max-h-[750px] overflow-y-auto rounded-xl shadow-lg border border-slate-300/60 bg-white">
-              <InvoiceDocumentRenderer
-                invoice={previewInvoiceObject}
-                businessProfile={businessProfile}
-                previewMode={true}
-              />
+              <div id="invoice-printable-target">
+                <InvoiceDocumentRenderer
+                  invoice={previewInvoiceObject}
+                  businessProfile={businessProfile}
+                  previewMode={true}
+                />
+              </div>
             </div>
           </div>
         </div>

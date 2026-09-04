@@ -66,7 +66,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'double_hung',
-    name: 'Double-Hung Sash Window',
+    name: 'Double-Hung Window',
     category: 'operable',
     openingMechanism: 'Both upper and lower sashes slide vertically in tracks',
     description: 'The timeless American classic. Featuring two vertically sliding sashes, allowing cool fresh air to enter through the bottom while warm indoor air escapes through the lowered top sash.',
@@ -135,7 +135,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'sliding',
-    name: 'Sliding / Glider Window',
+    name: 'Sliding Window',
     category: 'operable',
     openingMechanism: 'Sashes slide horizontally along smooth brass or nylon roller tracks',
     description: 'Horizontal sliding window units offering expansive glass widths and effortless lateral glide. Exceptional for rooms where wall width exceeds vertical height.',
@@ -169,7 +169,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'bay',
-    name: 'Bay Window (3-Panel Projection)',
+    name: 'Bay Window',
     category: 'projecting',
     openingMechanism: 'Central fixed picture window flanked by two 30° or 45° operable casements',
     description: 'A striking architectural focal point extending outward from the exterior wall. Creates interior depth, expansive 180° perimeter views, and can be outfitted with an integrated window seat or display ledge.',
@@ -203,7 +203,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'bow',
-    name: 'Bow Window (Curved 4-6 Panel)',
+    name: 'Bow Window',
     category: 'projecting',
     openingMechanism: 'Curved assembly of 4, 5, or 6 equal-width sashes in gentle arc',
     description: 'A graceful, rounded architectural projection. Formed with four or more sashes joined at shallow angles (usually 10°–15°) creating a smooth continuous circular curve with panoramic exterior vistas.',
@@ -302,7 +302,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'picture',
-    name: 'Picture / Fixed Architectural Window',
+    name: 'Picture Window',
     category: 'fixed',
     openingMechanism: 'Non-operable stationary direct-set glass in insulated frame',
     description: 'Large, stationary monolithic glass pane with zero operating sashes or mechanical hardware. Engineered to frame scenic outdoor vistas like a live painting and flood interiors with boundless daylight.',
@@ -336,7 +336,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'arched',
-    name: 'Arched / Palladian / Radius Window',
+    name: 'Arch Top Window',
     category: 'architectural',
     openingMechanism: 'Fixed decorative radius arch header over central or multi-lite sash',
     description: 'Featuring a curved semicircular or radius arch top. Inspired by classic Roman and Renaissance Palladian architecture, radius windows bestow unmatched grandeur and historic charm to building elevations.',
@@ -369,7 +369,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'tilt_and_turn',
-    name: 'Tilt & Turn European Window',
+    name: 'Tilt & Turn Window',
     category: 'operable',
     openingMechanism: 'Dual-action: Turn handle 90° to tilt inward at top; turn 180° to swing wide like a door',
     description: 'The pinnacle of German and European engineering. A single heavy-duty handle controls both top micro-ventilation and full inward-swinging side access for effortless cleaning and emergency egress.',
@@ -402,7 +402,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'skylight',
-    name: 'Skylight / Roof Window',
+    name: 'Roof Skylight',
     category: 'roof_overhead',
     openingMechanism: 'Center-pivot or top-hung manual / solar-powered motorized roof vent',
     description: 'Installed directly into the roof slope to bring down to 3x more daylight than vertical wall windows. Available in venting models with rain sensors that close automatically upon detecting precipitation.',
@@ -435,7 +435,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'jalousie',
-    name: 'Jalousie / Louvered Window',
+    name: 'Louvered Window',
     category: 'operable',
     openingMechanism: 'Cranked mechanism tilts multiple horizontal glass slats simultaneously',
     description: 'Composed of parallel horizontal glass slats set in metal clips. When cranked open, the slats tilt outward in unison like venetian blinds, providing 100% natural airflow in tropical and mild coastal climates.',
@@ -501,7 +501,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'garden',
-    name: 'Garden Window (Greenhouse Box)',
+    name: 'Garden Window',
     category: 'projecting',
     openingMechanism: 'Three-dimensional glass box with sloped glass roof and operable side venting casements',
     description: 'Extends outward from the house with glass on the top, front, and sides, plus an interior glass shelf. Acts as a miniature indoor greenhouse for growing fresh herbs, succulents, and flowers year-round.',
@@ -599,7 +599,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'clerestory',
-    name: 'Clerestory High-Wall Window',
+    name: 'Clerestory Window',
     category: 'architectural',
     openingMechanism: 'Fixed or power-vented horizontal ribbon windows placed high near ceiling rooflines',
     description: 'A horizontal band of windows installed high along an interior or exterior wall near the roofline. Brings abundant natural light deep into the building core while maintaining 100% privacy and freeing up wall space for furniture.',
@@ -632,7 +632,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'round_oculus',
-    name: 'Round / Oculus / Bullseye Window',
+    name: 'Round Window',
     category: 'architectural',
     openingMechanism: 'Fixed circular geometric frame with 4-way cross or starburst muntin grids',
     description: 'A full 360° circular architectural window (also known as an Oculus or Bullseye window). Adds nautical flair, historical symmetry, and focal point geometry to gable peaks, stairwells, and powder rooms.',
@@ -664,7 +664,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'octagon',
-    name: 'Octagon & Polygon Geometric Window',
+    name: 'Geometric Window',
     category: 'geometric',
     openingMechanism: 'Fixed eight-sided polygon with optional central diamond or spoke leaded grids',
     description: 'An eight-sided geometric polygon window designed to create visual rhythm, classical symmetry, and striking light diffusion in entryways, foyers, master bathrooms, and attic gables.',
@@ -698,7 +698,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'trapezoid',
-    name: 'Trapezoid & Rake Window',
+    name: 'Trapezoid Window',
     category: 'geometric',
     openingMechanism: 'Fixed geometric sloped raked top frame aligned to vaulted roof pitches',
     description: 'A customized raked geometric polygon engineered to follow the precise slope of cathedral ceilings and vaulted rooflines, creating panoramic cathedral glass walls and maximizing celestial views.',
@@ -731,7 +731,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'triangle',
-    name: 'Triangle & Gable Peak Window',
+    name: 'Triangle Window',
     category: 'geometric',
     openingMechanism: 'Fixed triangular apex frame (Isosceles, Right, or Equilateral geometry)',
     description: 'Engineered specifically for the topmost apex of roof gables. Triangle windows capture rising daylight and illuminate ceiling timber beams without compromising structural rafter tie-ins.',
@@ -763,7 +763,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'gothic_lancet',
-    name: 'Gothic Pointed Lancet Arch Window',
+    name: 'Gothic Arch Window',
     category: 'architectural',
     openingMechanism: 'Fixed or operable pointed Gothic lancet arch with trefoil and tracery fretwork',
     description: 'Distinguished by a sharp pointed arch apex and medieval filigree tracery. Infuses historic grandeur, ecclesiastical elegance, and dramatic vertical perspective into churches, library towers, and revival mansions.',
@@ -795,7 +795,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'bifold',
-    name: 'Bi-Fold & Accordion Folding Window',
+    name: 'Bi-Fold Window',
     category: 'folding_pass_through',
     openingMechanism: 'Multi-panel top-hung accordion sashes that fold flat against side jambs',
     description: 'A multi-leaf folding accordion window system that opens seamlessly to reveal a 100% unobstructed panoramic pass-through, effortlessly bridging indoor kitchens with outdoor dining decks.',
@@ -830,7 +830,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'pivot',
-    name: 'Center Pivot & Swivel Window',
+    name: 'Pivot Window',
     category: 'operable',
     openingMechanism: 'Rotates smoothly 360° on central top/bottom or horizontal mid-point heavy-duty pivot axles',
     description: 'Swivels around a central axis allowing extraordinary single-pane oversized glass surfaces. When swung open, warm air escapes above the pivot point while cool fresh air draws in below.',
@@ -864,7 +864,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'corner_butt',
-    name: 'Corner Butt-Glazed Glass Window',
+    name: 'Corner Glass Window',
     category: 'architectural',
     openingMechanism: 'Fixed 90° dual glass panes joined by structural crystal-clear silicone (Zero Corner Post)',
     description: 'Engineered with two monolithic glass panes meeting at a seamless 90° angle sealed with structural transparent silicone. Eliminates heavy corner posts for completely uninterrupted panoramic horizon views.',
@@ -898,7 +898,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'pass_through',
-    name: 'Gas-Strut Servery Pass-Through Window',
+    name: 'Pass-Through Window',
     category: 'folding_pass_through',
     openingMechanism: 'Single large top-hinged sash swings upward 80° supported by dual gas-assist compression struts',
     description: 'The ultimate kitchen bar window. Driven by automotive-grade gas struts, the entire sash effortlessly glides upward and stays open horizontally, converting your kitchen countertop into an outdoor entertaining servery.',
@@ -931,7 +931,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'eyebrow',
-    name: 'Eyebrow & Segmental Elliptical Window',
+    name: 'Eyebrow Window',
     category: 'architectural',
     openingMechanism: 'Fixed or bottom-operable window with shallow elliptical curved segmental top header',
     description: 'A gentle, low-rise arch curve (resembling a human eyebrow) that crowns square windows or dormers. Adds refined softness and European country romance without the extreme height needed for full semicircles.',
@@ -963,7 +963,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'quarter_round',
-    name: 'Quarter-Round & Fanlight Transom Window',
+    name: 'Quarter-Round Window',
     category: 'geometric',
     openingMechanism: 'Fixed 90° quadrant corner radius frame with decorative radial sunburst muntin spokes',
     description: 'A 90-degree quadrant window often installed in pairs framing a central picture window, or individually in roof corners and upper wall shoulders. Produces a radiant sunburst light pattern.',
@@ -995,7 +995,7 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   },
   {
     id: 'stained_glass',
-    name: 'Stained & Leaded Art Glass Window',
+    name: 'Stained Glass Window',
     category: 'specialty',
     openingMechanism: 'Fixed artisan leaded zinc came panel with hand-cut colored cathedral and beveled glass',
     description: 'An artisan architectural masterpiece. Handcrafted from colorful art glass tiles, faceted jewels, and hand-soldered lead/zinc cames, protected between dual clear thermal Low-E safety glass panes for modern insulation.',
@@ -1034,7 +1034,7 @@ export function convertWindowToProduct(spec: HouseWindowSpec, customPrice?: numb
   const costPrice = Math.round(sellPrice * 0.55);
   return {
     id: `prod-win-${spec.id}`,
-    name: `${spec.name} - Architectural Series`,
+    name: spec.name,
     sku: `WIN-${spec.id.toUpperCase().replace(/_/g, '-')}`,
     description: `${spec.description} Includes ${spec.defaultMaterials[0]} frame, ${spec.defaultGlazing[0]}, multi-point locking hardware, and standard ${spec.standardSizes.widthRangeInches} sizing.`,
     purchasePrice: costPrice,
@@ -1092,6 +1092,7 @@ export function convertWindowToInvoiceItem(
     name: `${spec.name} [${dimensions}]`,
     description: desc,
     sku: `WIN-${spec.id.toUpperCase().slice(0, 8)}`,
+    image: 'https://images.unsplash.com/photo-1503708998063-fb28b6dce510?auto=format&fit=crop&w=400&q=80',
     quantity: qty,
     unit: 'unit',
     unitPrice: unitPrice,

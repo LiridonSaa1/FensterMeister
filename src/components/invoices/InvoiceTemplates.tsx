@@ -1,6 +1,7 @@
 import React from 'react';
 import { Invoice, BusinessProfile, Offer } from '../../types';
-import { formatCurrency, formatDate } from '../../utils/formatters';
+import { formatCurrency, formatDate, getLineItemImage } from '../../utils/formatters';
+import { WindowItemImage } from '../windows/WindowSvgIcons';
 
 interface InvoiceTemplateProps {
   invoice?: Invoice;
@@ -23,19 +24,24 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
   const template = doc.template || businessProfile.invoiceTemplate || 'modern';
   const primaryColor = doc.primaryColor || businessProfile.invoiceColors || '#2563eb';
   const currency = doc.currency || businessProfile.defaultCurrency || 'USD';
+  const selectedFont = doc.font || businessProfile.font || 'Plus Jakarta Sans';
   const fontClass =
-    doc.font === 'Cinzel'
+    selectedFont === 'Cinzel'
       ? 'font-cinzel'
-      : doc.font === 'Playfair Display'
+      : selectedFont === 'Playfair Display'
       ? 'font-playfair'
-      : doc.font === 'Outfit'
+      : selectedFont === 'Outfit'
       ? 'font-outfit'
-      : doc.font === 'IBM Plex Mono'
+      : selectedFont === 'IBM Plex Mono'
       ? 'font-mono-code'
+      : selectedFont === 'Inter'
+      ? 'font-inter'
+      : selectedFont === 'Plus Jakarta Sans'
+      ? 'font-jakarta'
       : '';
 
-  const logoPosition = businessProfile.logoPosition || 'left';
-  const tableStyle = businessProfile.tableStyle || 'clean';
+  const logoPosition = doc.logoPosition || businessProfile.logoPosition || 'left';
+  const tableStyle = doc.tableStyle || businessProfile.tableStyle || 'clean';
 
   const client = doc.clientSnapshot;
   const items = doc.items || [];
@@ -128,13 +134,13 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
     );
   };
 
-  // 1. MODERN TEMPLATE
-  if (template === 'modern') {
-    return (
-      <div
-        id="invoice-printable-target"
-        className={`bg-white text-slate-800 p-8 sm:p-12 max-w-4xl mx-auto shadow-sm rounded-xl border border-slate-200/80 printable-invoice-container ${fontClass}`}
-      >
+  const renderTemplate = () => {
+    // 1. MODERN TEMPLATE
+    if (template === 'modern') {
+      return (
+        <div
+          className={`bg-white text-slate-800 p-8 sm:p-12 max-w-4xl mx-auto shadow-sm rounded-xl border border-slate-200/80 printable-invoice-container ${fontClass}`}
+        >
         {/* Top Accent Bar */}
         <div className="h-2 rounded-t-xl mb-8 -mt-8 -mx-8 sm:-mt-12 sm:-mx-12" style={{ backgroundColor: primaryColor }} />
 
@@ -236,20 +242,15 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               </tr>
             </thead>
             <tbody>
-              {items.map((item, idx) => (
-                <tr key={item.id || idx} className="hover:bg-slate-50/40">
-                  <td className="py-3 px-3">
-                    <div className="flex items-start gap-2.5">
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          referrerPolicy="no-referrer"
-                          className="w-8 h-8 rounded object-cover border border-slate-200 shrink-0"
-                        />
-                      )}
-                      <div>
-                        <p className="font-semibold text-slate-900">{item.name}</p>
+              {items.map((item, idx) => {
+                const itemImg = getLineItemImage(item);
+                return (
+                  <tr key={item.id || idx} className="hover:bg-slate-50/40">
+                    <td className="py-3 px-3">
+                      <div className="flex items-start gap-2.5">
+                        <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
+                        <div>
+                          <p className="font-semibold text-slate-900">{item.name}</p>
                         {item.description && (
                           <p className="text-slate-500 text-[11px] mt-0.5 line-clamp-2">{item.description}</p>
                         )}
@@ -273,7 +274,8 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
                     {formatCurrency(item.total, currency)}
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
@@ -431,17 +433,25 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {items.map((item, idx) => (
-              <tr key={idx}>
-                <td className="py-3 pr-4">
-                  <p className="font-medium text-slate-900">{item.name}</p>
-                  {item.description && <p className="text-slate-500 text-[11px] mt-0.5">{item.description}</p>}
-                </td>
-                <td className="py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
-                <td className="py-3 text-right text-slate-600">{formatCurrency(item.unitPrice, currency)}</td>
-                <td className="py-3 text-right font-medium text-slate-900">{formatCurrency(item.total, currency)}</td>
-              </tr>
-            ))}
+              {items.map((item, idx) => {
+                const itemImg = getLineItemImage(item);
+                return (
+                  <tr key={idx}>
+                    <td className="py-3 pr-4">
+                      <div className="flex items-start gap-2.5">
+                        <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
+                        <div>
+                          <p className="font-medium text-slate-900">{item.name}</p>
+                          {item.description && <p className="text-slate-500 text-[11px] mt-0.5">{item.description}</p>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
+                    <td className="py-3 text-right text-slate-600">{formatCurrency(item.unitPrice, currency)}</td>
+                    <td className="py-3 text-right font-medium text-slate-900">{formatCurrency(item.total, currency)}</td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
 
@@ -552,18 +562,25 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {items.map((item, idx) => (
-              <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : ''}>
-                <td className="py-2.5 px-3">
-                  <span className="font-bold text-slate-900">{item.name}</span>
-                  {item.description && <p className="text-slate-500 text-[11px]">{item.description}</p>}
-                </td>
-                <td className="py-2.5 px-2 text-center">{item.quantity}</td>
-                <td className="py-2.5 px-3 text-right">{formatCurrency(item.unitPrice, currency)}</td>
-                <td className="py-2.5 px-2 text-right">{item.vatRate}%</td>
-                <td className="py-2.5 px-3 text-right font-semibold">{formatCurrency(item.total, currency)}</td>
-              </tr>
-            ))}
+            {items.map((item, idx) => {
+              return (
+                <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : ''}>
+                  <td className="py-2.5 px-3">
+                    <div className="flex items-start gap-2.5">
+                      <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
+                      <div>
+                        <span className="font-bold text-slate-900">{item.name}</span>
+                        {item.description && <p className="text-slate-500 text-[11px]">{item.description}</p>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-2.5 px-2 text-center">{item.quantity}</td>
+                  <td className="py-2.5 px-3 text-right">{formatCurrency(item.unitPrice, currency)}</td>
+                  <td className="py-2.5 px-2 text-right">{item.vatRate}%</td>
+                  <td className="py-2.5 px-3 text-right font-semibold">{formatCurrency(item.total, currency)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -659,17 +676,24 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="py-3 px-3">
-                    <p className="font-bold text-slate-900">{item.name}</p>
-                    {item.description && <p className="text-slate-500 text-[11px]">{item.description}</p>}
-                  </td>
-                  <td className="py-3 px-2 text-center font-medium">{item.quantity}</td>
-                  <td className="py-3 px-3 text-right">{formatCurrency(item.unitPrice, currency)}</td>
-                  <td className="py-3 px-3 text-right font-bold text-slate-900">{formatCurrency(item.total, currency)}</td>
-                </tr>
-              ))}
+              {items.map((item, idx) => {
+                return (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="py-3 px-3">
+                      <div className="flex items-start gap-2.5">
+                        <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
+                        <div>
+                          <p className="font-bold text-slate-900">{item.name}</p>
+                          {item.description && <p className="text-slate-500 text-[11px]">{item.description}</p>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center font-medium">{item.quantity}</td>
+                    <td className="py-3 px-3 text-right">{formatCurrency(item.unitPrice, currency)}</td>
+                    <td className="py-3 px-3 text-right font-bold text-slate-900">{formatCurrency(item.total, currency)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
@@ -746,17 +770,25 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-amber-900/10">
-          {items.map((item, idx) => (
-            <tr key={idx}>
-              <td className="py-3">
-                <p className="font-semibold text-slate-900">{item.name}</p>
-                {item.description && <p className="text-slate-500 font-sans text-[11px]">{item.description}</p>}
+          {items.map((item, idx) => {
+            const itemImg = getLineItemImage(item);
+            return (
+              <tr key={idx}>
+                <td className="py-3">
+                  <div className="flex items-start gap-2.5">
+                    <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-amber-900/20" />
+                    <div>
+                      <p className="font-semibold text-slate-900">{item.name}</p>
+                    {item.description && <p className="text-slate-500 font-sans text-[11px]">{item.description}</p>}
+                  </div>
+                </div>
               </td>
               <td className="py-3 text-center font-sans">{item.quantity}</td>
               <td className="py-3 text-right font-sans">{formatCurrency(item.unitPrice, currency)}</td>
               <td className="py-3 text-right font-sans font-semibold text-slate-900">{formatCurrency(item.total, currency)}</td>
             </tr>
-          ))}
+          );
+        })}
         </tbody>
       </table>
 
@@ -780,4 +812,11 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
       </div>
     </div>
   );
+};
+
+return (
+  <div id="invoice-printable-target" className="invoice-document-root w-full">
+    {renderTemplate()}
+  </div>
+);
 };

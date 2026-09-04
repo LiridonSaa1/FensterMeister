@@ -171,12 +171,16 @@ export interface Offer {
   status: OfferStatus;
   notes?: string;
   terms?: string;
+  termsAndConditions?: string;
   
   convertedInvoiceId?: string;
   convertedAt?: string;
   
-  template: InvoiceTemplate;
-  primaryColor: string;
+  template?: InvoiceTemplate;
+  primaryColor?: string;
+  font?: string;
+  logoPosition?: LogoPosition;
+  tableStyle?: TableStyle;
   
   createdAt: string;
   updatedAt?: string;

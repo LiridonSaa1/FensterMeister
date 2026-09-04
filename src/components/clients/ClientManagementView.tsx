@@ -223,7 +223,7 @@ export const ClientManagementView: React.FC = () => {
   const clientOffers = activeClient ? offers.filter((o) => o.clientId === activeClient.id) : [];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-8xl mx-auto pb-16">
       {/* If in Client Detail View, show comprehensive profile */}
       {currentTab === 'client_detail' && activeClient ? (
         <div className="space-y-6 animate-in fade-in duration-150">

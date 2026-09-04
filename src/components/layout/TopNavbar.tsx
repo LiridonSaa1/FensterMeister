@@ -6,7 +6,6 @@ import {
   FileText,
   Users,
   FileSpreadsheet,
-  RotateCcw,
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -17,7 +16,7 @@ interface TopNavbarProps {
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleMobileMenu }) => {
-  const { currentTab, setCurrentTab, invoices, clients, products, offers, businessProfile, setSelectedInvoiceId, setSelectedClientId, setSelectedOfferId, resetToSampleData, t, language, setLanguage } = useApp();
+  const { currentTab, setCurrentTab, invoices, clients, products, offers, businessProfile, setSelectedInvoiceId, setSelectedClientId, setSelectedOfferId, t, language } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -199,43 +198,6 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleMobileMenu }) => {
 
       {/* Right Controls: Notifications & User Profile */}
       <div className="flex items-center gap-3 sm:gap-4">
-        {/* Language Switcher Button */}
-        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setLanguage('en')}
-            className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-              language === 'en' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-            }`}
-            title="Switch to English"
-          >
-            <span>🇬🇧</span>
-            <span className="hidden sm:inline">EN</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setLanguage('de')}
-            className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-              language === 'de' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-            }`}
-            title="Auf Deutsch umschalten"
-          >
-            <span>🇩🇪</span>
-            <span className="hidden sm:inline">DE</span>
-          </button>
-        </div>
-
-        {/* Reset Demo Data Button */}
-        <button
-          id="navbar-reset-demo-btn"
-          onClick={resetToSampleData}
-          title={language === 'de' ? 'Auf Beispieldaten zurücksetzen' : 'Reset to initial sample data'}
-          className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>{language === 'de' ? 'Demo-Daten' : 'Demo Data'}</span>
-        </button>
-
         {/* Currency badge */}
         <div className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">
           <span>{businessProfile.defaultCurrency}</span>

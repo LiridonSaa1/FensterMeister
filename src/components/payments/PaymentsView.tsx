@@ -3,6 +3,7 @@ import {
   CreditCard,
   Search,
   Filter,
+  ChevronDown,
   CheckCircle2,
   Calendar,
   Building,
@@ -31,7 +32,14 @@ export const PaymentsView: React.FC = () => {
     return matchSearch && matchMethod;
   });
 
-  const totalCollected = payments.reduce((acc, p) => acc + p.amount, 0);
+  const methodOptions = [
+    { id: 'all', label: t.common.all },
+    { id: 'bank_transfer', label: t.payments.bankTransfer },
+    { id: 'credit_card', label: t.payments.creditCard },
+    { id: 'stripe', label: t.payments.stripe },
+    { id: 'paypal', label: t.payments.paypal },
+    { id: 'cash', label: t.payments.cash },
+  ];
 
   const getMethodLabel = (m: string) => {
     switch (m) {
@@ -51,51 +59,44 @@ export const PaymentsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">{t.payments.title}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {t.payments.subtitle}
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <CreditCard className="w-7 h-7 text-blue-600" />
+            {t.payments.title}
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            {language === 'de' ? 'Übersicht aller erfassten Zahlungseingänge.' : 'Overview of all recorded incoming payments.'}
           </p>
         </div>
       </div>
 
-      {/* KPI Strip */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 block">{t.payments.totalCollected}</span>
-          <p className="text-2xl font-bold text-emerald-600 mt-1 font-mono">
-            {formatCurrency(totalCollected, currency)}
-          </p>
-          <span className="text-[10px] text-slate-400">{payments.length} {language === 'de' ? 'verifizierte Zahlungen' : 'verified transactions'}</span>
+          <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Zahlungseingänge Gesamt' : 'Total Payment Count'}</span>
+          <p className="text-xl font-bold text-slate-900 mt-1">{payments.length}</p>
         </div>
-
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Banküberweisungen' : 'Bank Wire Settlements'}</span>
-          <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">
+          <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Erfasstes Volumen' : 'Recorded Volume'}</span>
+          <p className="text-xl font-bold text-emerald-600 mt-1 font-mono">
             {formatCurrency(
-              payments.filter((p) => p.method === 'bank_transfer').reduce((acc, p) => acc + p.amount, 0),
+              payments.reduce((acc, p) => acc + p.amount, 0),
               currency
             )}
           </p>
-          <span className="text-[10px] text-slate-400">{language === 'de' ? 'Direkte SEPA- & Bankeingänge' : 'Direct ACH & wire clearances'}</span>
         </div>
-
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Kreditkarten & Gateways' : 'Card & Digital Gateways'}</span>
-          <p className="text-2xl font-bold text-blue-600 mt-1 font-mono">
-            {formatCurrency(
-              payments.filter((p) => p.method === 'credit_card' || p.method === 'stripe' || p.method === 'paypal').reduce((acc, p) => acc + p.amount, 0),
-              currency
-            )}
+          <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Letzte Zahlung' : 'Latest Payment'}</span>
+          <p className="text-sm font-bold text-slate-800 mt-1">
+            {payments.length > 0 ? formatDate(payments[0].date) : '-'}
           </p>
-          <span className="text-[10px] text-slate-400">{language === 'de' ? 'Sofortige digitale Zahlungen' : 'Instant digital transactions'}</span>
         </div>
       </div>
 
-      {/* Search & Method Filter */}
+      {/* Filter & Search */}
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -108,15 +109,26 @@ export const PaymentsView: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
-          {[
-            { id: 'all', label: t.common.all },
-            { id: 'bank_transfer', label: t.payments.bankTransfer },
-            { id: 'credit_card', label: t.payments.creditCard },
-            { id: 'stripe', label: t.payments.stripe },
-            { id: 'paypal', label: t.payments.paypal },
-            { id: 'cash', label: t.payments.cash },
-          ].map((m) => (
+        {/* Mobile Dropdown Filter */}
+        <div className="sm:hidden w-full relative">
+          <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value)}
+            className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none capitalize cursor-pointer"
+          >
+            {methodOptions.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+
+        {/* Desktop Method Filter Pills */}
+        <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto text-xs">
+          {methodOptions.map((m) => (
             <button
               key={m.id}
               onClick={() => setMethodFilter(m.id)}
@@ -146,37 +158,53 @@ export const PaymentsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredPayments.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{p.reference}</td>
-                  <td className="py-3.5 px-3 font-semibold text-slate-800">{p.clientName}</td>
-                  <td className="py-3.5 px-3">
-                    <button
-                      onClick={() => {
-                        setSelectedInvoiceId(p.invoiceId);
-                        setCurrentTab('invoices');
-                      }}
-                      className="font-mono font-semibold text-blue-600 hover:underline cursor-pointer"
-                    >
-                      {p.invoiceNumber}
-                    </button>
-                  </td>
-                  <td className="py-3.5 px-3 text-slate-600">{formatDate(p.date)}</td>
-                  <td className="py-3.5 px-3">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
-                      {getMethodLabel(p.method)}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-3 text-right font-bold text-emerald-600 font-mono text-sm">
-                    +{formatCurrency(p.amount, currency)}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <CheckCircle2 className="w-3 h-3" /> {language === 'de' ? 'Verbucht' : 'Settled'}
-                    </span>
+              {filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
+                    <CreditCard className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+                    <p className="font-semibold text-slate-600">
+                      {language === 'de' ? 'Keine Zahlungseinträge vorhanden' : 'No Payment Transactions Found'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {language === 'de'
+                        ? 'Sobald Sie eine Zahlung für eine Rechnung verbuchen, erscheint diese in der Übersicht.'
+                        : 'Transactions recorded against customer invoices will automatically appear here.'}
+                    </p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredPayments.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{p.reference}</td>
+                    <td className="py-3.5 px-3 font-semibold text-slate-800">{p.clientName}</td>
+                    <td className="py-3.5 px-3">
+                      <button
+                        onClick={() => {
+                          setSelectedInvoiceId(p.invoiceId);
+                          setCurrentTab('invoices');
+                        }}
+                        className="font-mono font-semibold text-blue-600 hover:underline cursor-pointer"
+                      >
+                        {p.invoiceNumber}
+                      </button>
+                    </td>
+                    <td className="py-3.5 px-3 text-slate-600">{formatDate(p.date)}</td>
+                    <td className="py-3.5 px-3">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                        {getMethodLabel(p.method)}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-bold text-emerald-600 font-mono text-sm">
+                      +{formatCurrency(p.amount, currency)}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" /> {language === 'de' ? 'Verbucht' : 'Settled'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

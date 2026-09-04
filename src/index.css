@@ -11,19 +11,27 @@
 }
 
 .font-cinzel {
-  font-family: 'Cinzel', serif;
+  font-family: 'Cinzel', serif !important;
 }
 
 .font-playfair {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Playfair Display', serif !important;
 }
 
 .font-outfit {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Outfit', sans-serif !important;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.font-jakarta {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
 .font-mono-code {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace !important;
 }
 
 @media print {

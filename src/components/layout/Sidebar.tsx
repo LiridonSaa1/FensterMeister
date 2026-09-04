@@ -23,17 +23,12 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) => {
-  const { currentTab, setCurrentTab, businessProfile, invoices, clients, products, offers, emailLogs, setSelectedInvoiceId, setSelectedOfferId, t, language, setLanguage } = useApp();
-
-  const unpaidCount = invoices.filter((i) => i.status === 'unpaid' || i.status === 'overdue').length;
-  const pendingOffersCount = offers.filter((o) => o.status === 'sent' || o.status === 'draft').length;
+  const { currentTab, setCurrentTab, businessProfile, setSelectedInvoiceId, setSelectedOfferId, t, language, setLanguage } = useApp();
 
   const navItems: Array<{
     id: NavigationTab;
     label: string;
     icon: React.ReactNode;
-    badge?: number | string;
-    badgeColor?: string;
   }> = [
     {
       id: 'dashboard',
@@ -44,36 +39,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
       id: 'invoices',
       label: t.nav.invoices,
       icon: <FileText className="w-4 h-4" />,
-      badge: unpaidCount > 0 ? `${unpaidCount} ${language === 'de' ? 'fällig' : 'due'}` : invoices.length,
-      badgeColor: unpaidCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600',
     },
     {
       id: 'offers',
       label: t.nav.offers,
       icon: <FileSpreadsheet className="w-4 h-4" />,
-      badge: pendingOffersCount > 0 ? pendingOffersCount : undefined,
-      badgeColor: 'bg-blue-100 text-blue-800',
     },
     {
       id: 'clients',
       label: t.nav.clients,
       icon: <Users className="w-4 h-4" />,
-      badge: clients.length,
-      badgeColor: 'bg-slate-100 text-slate-600',
     },
     {
       id: 'products',
       label: t.nav.products,
       icon: <Package className="w-4 h-4" />,
-      badge: products.length,
-      badgeColor: 'bg-slate-100 text-slate-600',
     },
     {
       id: 'windows',
       label: t.nav.windows,
       icon: <AppWindow className="w-4 h-4" />,
-      badge: t.nav.stylesCount,
-      badgeColor: 'bg-blue-100 text-blue-700 font-bold',
     },
     {
       id: 'payments',
@@ -84,8 +69,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
       id: 'email_history',
       label: t.nav.emailHistory,
       icon: <Mail className="w-4 h-4" />,
-      badge: emailLogs.length > 0 ? emailLogs.length : undefined,
-      badgeColor: 'bg-slate-800 text-slate-300',
     },
     {
       id: 'settings',
@@ -168,11 +151,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
                   <span className={isActive ? 'text-blue-400' : 'text-slate-400'}>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
-                {item.badge !== undefined && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${item.badgeColor}`}>
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}

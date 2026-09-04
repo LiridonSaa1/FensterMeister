@@ -96,6 +96,20 @@ export interface Translations {
     optional: string;
     required: string;
   };
+  status: {
+    paid: string;
+    unpaid: string;
+    overdue: string;
+    draft: string;
+    sent: string;
+    cancelled: string;
+    accepted: string;
+    rejected: string;
+    expired: string;
+    pending: string;
+    delivered: string;
+    failed: string;
+  };
   dashboard: {
     title: string;
     subtitle: string;
@@ -164,6 +178,21 @@ export interface Translations {
     templateStyle: string;
     colorTheme: string;
     backToList: string;
+    metrics: {
+      totalInvoiced: string;
+      collected: string;
+      outstanding: string;
+      overdue: string;
+    };
+    searchPlaceholder: string;
+    client: string;
+    date: string;
+    dueDate: string;
+    amount: string;
+    status: string;
+    noInvoices: string;
+    sendEmail: string;
+    items: string;
   };
   offers: {
     title: string;
@@ -359,6 +388,58 @@ export interface Translations {
   settings: {
     title: string;
     subtitle: string;
+    saveSettings: string;
+    vatRate: string;
+    logoPosition: string;
+    defaultPaymentInstructions: string;
+    tabs: {
+      company: string;
+      banking: string;
+      invoicing: string;
+      branding: string;
+      email: string;
+      language: string;
+    };
+    sections: {
+      businessIdentity: string;
+      bankingDetails: string;
+      invoiceDefaults: string;
+      brandingDesign: string;
+      brevoIntegration: string;
+      languageLocalization: string;
+    };
+    fields: {
+      businessName: string;
+      signatoryName: string;
+      businessEmail: string;
+      phone: string;
+      website: string;
+      address: string;
+      city: string;
+      postalCode: string;
+      country: string;
+      bankName: string;
+      accountHolder: string;
+      iban: string;
+      swift: string;
+      vatNumber: string;
+      registrationNumber: string;
+      defaultCurrency: string;
+      defaultVatRate: string;
+      invoicePrefix: string;
+      offerPrefix: string;
+      defaultDueDays: string;
+      latePaymentFee: string;
+      paymentTerms: string;
+      invoiceTemplate: string;
+      brandColor: string;
+      fontFamily: string;
+      tableStyle: string;
+      brevoApiKey: string;
+      senderName: string;
+      senderEmail: string;
+      replyTo: string;
+    };
     tabProfile: string;
     tabBanking: string;
     tabInvoicing: string;
@@ -438,7 +519,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: 'Dashboard',
       invoices: 'Invoices',
-      offers: 'Quotations & Offers',
+      offers: 'Offers',
       clients: 'Clients',
       windows: 'House Window Types',
       products: 'Products & Services',
@@ -530,6 +611,20 @@ export const translations: Record<Language, Translations> = {
       optional: 'Optional',
       required: 'Required',
     },
+    status: {
+      paid: 'Paid',
+      unpaid: 'Unpaid',
+      overdue: 'Overdue',
+      draft: 'Draft',
+      sent: 'Sent',
+      cancelled: 'Cancelled',
+      accepted: 'Accepted',
+      rejected: 'Rejected',
+      expired: 'Expired',
+      pending: 'Pending',
+      delivered: 'Delivered',
+      failed: 'Failed',
+    },
     dashboard: {
       title: 'Enterprise Dashboard',
       subtitle: 'Real-time overview of invoices, window estimations, revenue, and client operations',
@@ -598,36 +693,51 @@ export const translations: Record<Language, Translations> = {
       templateStyle: 'Template Style',
       colorTheme: 'Color Accent',
       backToList: 'Back to Invoices',
+      metrics: {
+        totalInvoiced: 'Total Invoiced',
+        collected: 'Collected',
+        outstanding: 'Outstanding',
+        overdue: 'Overdue',
+      },
+      searchPlaceholder: 'Search invoices by number, client, or email...',
+      client: 'Client',
+      date: 'Date',
+      dueDate: 'Due Date',
+      amount: 'Amount',
+      status: 'Status',
+      noInvoices: 'No invoices found',
+      sendEmail: 'Send via Email',
+      items: 'Line Items',
     },
     offers: {
-      title: 'Quotations & Window Offers',
-      subtitle: 'Configure custom architectural windows, calculate quotes, and convert directly into invoices',
-      newOffer: 'Create New Quotation',
-      editOffer: 'Edit Quotation',
-      offerNumber: 'Quotation Number',
-      offerDate: 'Quotation Date',
+      title: 'Offers',
+      subtitle: 'Configure custom architectural windows, calculate offers, and convert directly into invoices',
+      newOffer: 'Create New Offer',
+      editOffer: 'Edit Offer',
+      offerNumber: 'Offer Number',
+      offerDate: 'Offer Date',
       validUntil: 'Valid Until',
       client: 'Client / Recipient',
       scopeOfWork: 'Offer Items & Window Specifications',
       addLineItem: 'Add Item',
       addWindowPreset: '+ Add Window Specification',
-      totalEstimated: 'Total Quotation Value',
+      totalEstimated: 'Total Offer Value (incl. VAT)',
       convertToInvoice: 'Convert to Invoice',
-      convertConfirm: 'Convert this quotation into an active invoice? Items, client, and totals will be preserved.',
+      convertConfirm: 'Convert this offer into an active invoice? Items, client, and totals will be preserved.',
       offerAccepted: 'Offer Accepted',
       offerRejected: 'Offer Rejected',
       markAccepted: 'Mark as Accepted',
       markRejected: 'Mark as Rejected',
-      sendOfferEmail: 'Send Quote via Brevo',
+      sendOfferEmail: 'Send Offer via Brevo',
       downloadOfferPdf: 'Download Offer PDF',
       statusDraft: 'Draft',
       statusSent: 'Sent to Client',
       statusAccepted: 'Accepted',
       statusRejected: 'Declined',
       statusExpired: 'Expired',
-      emptyList: 'No quotations found.',
-      createdSuccess: 'Quotation created successfully!',
-      convertedSuccess: 'Quotation successfully converted to Invoice!',
+      emptyList: 'No offers found.',
+      createdSuccess: 'Offer created successfully!',
+      convertedSuccess: 'Offer successfully converted to Invoice!',
     },
     windows: {
       title: 'House Window Types & Engineering Catalog',
@@ -793,6 +903,58 @@ export const translations: Record<Language, Translations> = {
     settings: {
       title: 'Business Profile & Settings',
       subtitle: 'Configure enterprise branding, tax IDs, banking coordinates, language localization, and Brevo email',
+      saveSettings: 'Save Settings',
+      vatRate: 'VAT Rate',
+      logoPosition: 'Logo Alignment',
+      defaultPaymentInstructions: 'Default Payment Instructions',
+      tabs: {
+        company: 'Company Profile',
+        banking: 'Bank Account',
+        invoicing: 'Invoicing Defaults',
+        branding: 'Branding & Design',
+        email: 'Email & Brevo',
+        language: 'Language & Region',
+      },
+      sections: {
+        businessIdentity: 'Business Identity & Legal Entity',
+        bankingDetails: 'Bank & Tax Information',
+        invoiceDefaults: 'Default Invoice & Quote Settings',
+        brandingDesign: 'Branding, Layout & Colors',
+        brevoIntegration: 'Brevo (Sendinblue) Integration',
+        languageLocalization: 'Language & Localization',
+      },
+      fields: {
+        businessName: 'Business / Company Name',
+        signatoryName: 'Authorized Signatory Name',
+        businessEmail: 'Official Business Email',
+        phone: 'Phone Number',
+        website: 'Company Website',
+        address: 'Street Address',
+        city: 'City',
+        postalCode: 'Postal / ZIP Code',
+        country: 'Country',
+        bankName: 'Bank Name',
+        accountHolder: 'Account Holder Name',
+        iban: 'IBAN Number',
+        swift: 'BIC / SWIFT Code',
+        vatNumber: 'VAT Registration ID',
+        registrationNumber: 'Commercial Registration No.',
+        defaultCurrency: 'Default Currency',
+        defaultVatRate: 'Default VAT Rate (%)',
+        invoicePrefix: 'Invoice Prefix',
+        offerPrefix: 'Quotation Prefix',
+        defaultDueDays: 'Default Due Period (Days)',
+        latePaymentFee: 'Late Payment Fee (%)',
+        paymentTerms: 'Default Payment Terms',
+        invoiceTemplate: 'Invoice Template',
+        brandColor: 'Brand Primary Color',
+        fontFamily: 'Typography Font',
+        tableStyle: 'Table Styling',
+        brevoApiKey: 'Brevo API Key',
+        senderName: 'Sender Name',
+        senderEmail: 'Sender Email Address',
+        replyTo: 'Reply-To Email',
+      },
       tabProfile: 'Company Information',
       tabBanking: 'Bank & Tax Details',
       tabInvoicing: 'Invoice Defaults',
@@ -870,7 +1032,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: 'Übersicht / Dashboard',
       invoices: 'Rechnungen',
-      offers: 'Angebote & Kostenvoranschläge',
+      offers: 'Angebote',
       clients: 'Kunden',
       windows: 'Fenstertypen-Katalog',
       products: 'Produkte & Leistungen',
@@ -962,6 +1124,20 @@ export const translations: Record<Language, Translations> = {
       optional: 'Optional',
       required: 'Erforderlich',
     },
+    status: {
+      paid: 'Bezahlt',
+      unpaid: 'Offen',
+      overdue: 'Überfällig',
+      draft: 'Entwurf',
+      sent: 'Gesendet',
+      cancelled: 'Storniert',
+      accepted: 'Angenommen',
+      rejected: 'Abgelehnt',
+      expired: 'Abgelaufen',
+      pending: 'Ausstehend',
+      delivered: 'Zugestellt',
+      failed: 'Fehlgeschlagen',
+    },
     dashboard: {
       title: 'Unternehmens-Dashboard',
       subtitle: 'Echtzeit-Übersicht über Rechnungen, Fensterangebote, Einnahmen und Kundenverwaltung',
@@ -1030,9 +1206,24 @@ export const translations: Record<Language, Translations> = {
       templateStyle: 'Rechnungsvorlage',
       colorTheme: 'Akzentfarbe',
       backToList: 'Zurück zur Rechnungsliste',
+      metrics: {
+        totalInvoiced: 'Gesamt Fakturiert',
+        collected: 'Erhalten / Bezahlt',
+        outstanding: 'Ausstehend',
+        overdue: 'Überfällig',
+      },
+      searchPlaceholder: 'Rechnungen nach Nummer, Kunde oder E-Mail suchen...',
+      client: 'Kunde',
+      date: 'Datum',
+      dueDate: 'Fälligkeitsdatum',
+      amount: 'Betrag',
+      status: 'Status',
+      noInvoices: 'Keine Rechnungen gefunden',
+      sendEmail: 'Per E-Mail senden',
+      items: 'Positionen',
     },
     offers: {
-      title: 'Angebote & Kostenvoranschläge',
+      title: 'Angebote',
       subtitle: 'Individuelle Fenster konfigurieren, Angebote kalkulieren und mit einem Klick in Rechnungen umwandeln',
       newOffer: 'Neues Angebot erstellen',
       editOffer: 'Angebot bearbeiten',
@@ -1225,6 +1416,58 @@ export const translations: Record<Language, Translations> = {
     settings: {
       title: 'Unternehmensprofil & Einstellungen',
       subtitle: 'Unternehmensdaten, Bank- und Steuerangaben, Sprachlokalisierung und Brevo E-Mail konfigurieren',
+      saveSettings: 'Einstellungen speichern',
+      vatRate: 'MwSt.-Satz',
+      logoPosition: 'Logo-Ausrichtung',
+      defaultPaymentInstructions: 'Standard-Zahlungshinweise',
+      tabs: {
+        company: 'Unternehmensprofil',
+        banking: 'Bankverbindung',
+        invoicing: 'Rechnungseinstellungen',
+        branding: 'Branding & Design',
+        email: 'E-Mail & Brevo',
+        language: 'Sprache & Region',
+      },
+      sections: {
+        businessIdentity: 'Unternehmensidentität & Firmendaten',
+        bankingDetails: 'Bank- & Steuerdaten',
+        invoiceDefaults: 'Standardwerte für Rechnungen & Angebote',
+        brandingDesign: 'Branding, Layout & Farben',
+        brevoIntegration: 'Brevo (Sendinblue) Integration',
+        languageLocalization: 'Sprache & Lokalisierung',
+      },
+      fields: {
+        businessName: 'Firmenname / Unternehmen',
+        signatoryName: 'Vertretungsberechtigte Person',
+        businessEmail: 'Offizielle E-Mail-Adresse',
+        phone: 'Telefonnummer',
+        website: 'Webseite',
+        address: 'Straße & Hausnummer',
+        city: 'Stadt',
+        postalCode: 'Postleitzahl',
+        country: 'Land',
+        bankName: 'Bankname',
+        accountHolder: 'Kontoinhaber',
+        iban: 'IBAN-Nummer',
+        swift: 'BIC / SWIFT-Code',
+        vatNumber: 'USt-IdNr.',
+        registrationNumber: 'Handelsregisternummer',
+        defaultCurrency: 'Standardwährung',
+        defaultVatRate: 'Standard MwSt.-Satz (%)',
+        invoicePrefix: 'Rechnungs-Präfix',
+        offerPrefix: 'Angebots-Präfix',
+        defaultDueDays: 'Zahlungsziel (Tage)',
+        latePaymentFee: 'Mahngebühr / Säumniszuschlag (%)',
+        paymentTerms: 'Standard-Zahlungsbedingungen',
+        invoiceTemplate: 'Rechnungsvorlage',
+        brandColor: 'Hauptfarbe (Branding)',
+        fontFamily: 'Schriftart (Typografie)',
+        tableStyle: 'Tabellenstil',
+        brevoApiKey: 'Brevo API-Schlüssel',
+        senderName: 'Absendername',
+        senderEmail: 'Absender E-Mail',
+        replyTo: 'Antwort E-Mail (Reply-To)',
+      },
       tabProfile: 'Unternehmensdaten',
       tabBanking: 'Bank & Steuerdaten',
       tabInvoicing: 'Rechnungs-Standards',

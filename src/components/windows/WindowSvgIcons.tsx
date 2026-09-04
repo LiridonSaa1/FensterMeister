@@ -962,3 +962,67 @@ export const WINDOW_SVG_COMPONENTS: Record<string, React.FC<WindowSvgProps>> = {
   quarter_round: QuarterRoundWindowSvg,
   stained_glass: StainedGlassWindowSvg,
 };
+
+export function getSvgKeyFromItemName(name: string = ''): string {
+  const n = name.toLowerCase();
+  if (n.includes('skylight') || n.includes('roof')) return 'skylight';
+  if (n.includes('casement') && n.includes('french')) return 'french_casement';
+  if (n.includes('casement')) return 'casement';
+  if (n.includes('double-hung') || n.includes('double hung')) return 'double_hung';
+  if (n.includes('single-hung') || n.includes('single hung')) return 'single_hung';
+  if (n.includes('sliding') || n.includes('glider')) return 'sliding';
+  if (n.includes('bay')) return 'bay';
+  if (n.includes('bow')) return 'bow';
+  if (n.includes('awning')) return 'awning';
+  if (n.includes('hopper')) return 'hopper';
+  if (n.includes('picture')) return 'picture';
+  if (n.includes('arch')) return 'arched';
+  if (n.includes('tilt')) return 'tilt_and_turn';
+  if (n.includes('jalousie') || n.includes('louver')) return 'jalousie';
+  if (n.includes('transom')) return 'transom';
+  if (n.includes('garden')) return 'garden';
+  if (n.includes('dormer')) return 'dormer';
+  if (n.includes('clerestory')) return 'clerestory';
+  if (n.includes('round') || n.includes('oculus')) return 'round_oculus';
+  if (n.includes('octagon') || n.includes('polygon')) return 'octagon';
+  if (n.includes('trapezoid')) return 'trapezoid';
+  if (n.includes('triangle') || n.includes('gable')) return 'triangle';
+  if (n.includes('gothic')) return 'gothic_lancet';
+  if (n.includes('bifold') || n.includes('folding')) return 'bifold';
+  if (n.includes('pivot')) return 'pivot';
+  if (n.includes('stained')) return 'stained_glass';
+  return 'casement';
+}
+
+export const WindowItemImage: React.FC<{
+  item: { name?: string; image?: string; sku?: string; type?: string; svgKey?: string };
+  className?: string;
+}> = ({ item, className = 'w-10 h-10 rounded-lg shrink-0' }) => {
+  const [imgFailed, setImgFailed] = React.useState(false);
+
+  // Re-enable image attempt if item.image URL changes
+  React.useEffect(() => {
+    setImgFailed(false);
+  }, [item.image]);
+
+  if (item.image && item.image.trim().length > 0 && !imgFailed) {
+    return (
+      <img
+        src={item.image}
+        alt={item.name || 'Product'}
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+        className={`${className} object-cover border border-slate-200 bg-white`}
+      />
+    );
+  }
+
+  const svgKey = item.svgKey || getSvgKeyFromItemName(item.name);
+  const SvgComponent = WINDOW_SVG_COMPONENTS[svgKey] || WINDOW_SVG_COMPONENTS.casement;
+
+  return (
+    <div className={`${className} bg-slate-100 border border-slate-200 flex items-center justify-center p-1 overflow-hidden shrink-0 shadow-2xs`}>
+      <SvgComponent className="w-full h-full object-contain" />
+    </div>
+  );
+};
