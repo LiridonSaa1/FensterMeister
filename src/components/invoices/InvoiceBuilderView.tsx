@@ -21,6 +21,7 @@ import {
   Check,
   RotateCcw,
   AppWindow,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import {
@@ -38,6 +39,7 @@ import { InvoiceDocumentRenderer } from './InvoiceTemplates';
 import { generatePdfFromElement, printElement } from '../../utils/pdfGenerator';
 import { SendEmailModal } from '../email/SendEmailModal';
 import { WindowSelectorModal } from '../windows/WindowSelectorModal';
+import { WindowItemImage } from '../windows/WindowSvgIcons';
 
 interface InvoiceBuilderViewProps {
   editInvoiceId?: string | null;
@@ -87,7 +89,7 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
     existingInvoice?.currency || businessProfile.defaultCurrency || 'EUR'
   );
   const [paymentTerms, setPaymentTerms] = useState<string>(
-    existingInvoice?.paymentTerms || businessProfile.paymentTerms || (language === 'de' ? 'Zahlbar innerhalb von 14 Tagen' : 'Net 30 Days')
+    existingInvoice?.paymentTerms || businessProfile.paymentTerms || 'Zahlbar innerhalb von 14 Tagen'
   );
 
   // Items State
@@ -399,9 +401,19 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
     }
   };
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   // PDF Export and Print
   const handleDownloadPdf = async () => {
-    await generatePdfFromElement('invoice-printable-target', `Invoice_${invoicePrefix}${invoiceNumber}.pdf`, true);
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    try {
+      await generatePdfFromElement('invoice-printable-target', `Invoice_${invoicePrefix}${invoiceNumber}.pdf`, true);
+    } catch (err) {
+      console.error('PDF download error:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handlePrint = () => {
@@ -437,10 +449,15 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
           </button>
           <button
             onClick={handleDownloadPdf}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+            disabled={isGeneratingPdf}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 rounded-xl transition-colors cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>PDF</span>
+            {isGeneratingPdf ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>{isGeneratingPdf ? (language === 'de' ? 'PDF wird erstellt...' : 'Generating PDF...') : 'PDF'}</span>
           </button>
           <button
             onClick={handlePrint}
@@ -685,160 +702,133 @@ export const InvoiceBuilderView: React.FC<InvoiceBuilderViewProps> = ({ editInvo
                   {items.map((item, idx) => (
                     <div
                       key={item.id || idx}
-                      className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/90 space-y-3 relative group text-xs hover:border-slate-300 transition-all"
+                      className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-3 hover:bg-white transition-all shadow-2xs"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">
-                            {item.type}
-                          </span>
+
+                          {/* Product Image Thumbnail */}
+                          <WindowItemImage item={item} className="w-10 h-10 rounded-lg shrink-0 shadow-2xs" />
+
+                          <div className="flex-1">
+                            {/* Product Select Dropdown */}
+                            <select
+                              value={item.productId || products.find((p) => p.name.toLowerCase() === item.name.toLowerCase())?.id || ''}
+                              onChange={(e) => {
+                                const selectedId = e.target.value;
+                                if (!selectedId) return;
+                                const foundProduct = products.find((p) => p.id === selectedId);
+                                if (foundProduct) {
+                                  const qty = Number(item.quantity) || 1;
+                                  const base = qty * (Number(foundProduct.sellingPrice) || 0);
+                                  let disc = 0;
+                                  if (foundProduct.discount && foundProduct.discount > 0) {
+                                    disc = base * (foundProduct.discount / 100);
+                                  }
+                                  const updated = [...items];
+                                  updated[idx] = {
+                                    ...item,
+                                    productId: foundProduct.id,
+                                    name: foundProduct.name,
+                                    description: foundProduct.description || item.description,
+                                    unitPrice: foundProduct.sellingPrice,
+                                    vatRate: foundProduct.vatRate ?? businessProfile.defaultVatRate ?? 20,
+                                    unit: foundProduct.unit || item.unit,
+                                    image: foundProduct.image || item.image,
+                                    type: foundProduct.type || item.type,
+                                    total: Math.max(0, base - disc),
+                                  };
+                                  setItems(updated);
+                                }
+                              }}
+                              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 cursor-pointer shadow-2xs"
+                            >
+                              <option value="">
+                                {item.name ? item.name : (language === 'de' ? '📦 Produkt wählen...' : '📦 Select Product...')}
+                              </option>
+                              {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({formatCurrency(p.sellingPrice, currency)})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
-                        {/* Reorder and Delete Controls */}
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
-                            disabled={idx === 0}
                             onClick={() => handleMoveItem(idx, 'up')}
-                            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 disabled:opacity-30 cursor-pointer"
-                            title="Move Up"
+                            disabled={idx === 0}
+                            className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
                           >
                             <MoveUp className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
-                            disabled={idx === items.length - 1}
                             onClick={() => handleMoveItem(idx, 'down')}
-                            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 disabled:opacity-30 cursor-pointer"
-                            title="Move Down"
+                            disabled={idx === items.length - 1}
+                            className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
                           >
                             <MoveDown className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteItem(idx)}
-                            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer ml-1"
-                            title="Delete Item"
+                            disabled={items.length <= 1}
+                            className="p-1 text-red-500 hover:text-red-700 disabled:opacity-30 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                        <div className="sm:col-span-7">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Produkt / Bezeichnung' : 'Product / Item Name'}</label>
-                          <select
-                            value={item.productId || products.find((p) => p.name.toLowerCase() === item.name.toLowerCase())?.id || ''}
-                            onChange={(e) => {
-                              const selectedId = e.target.value;
-                              if (!selectedId) return;
-                              const foundProduct = products.find((p) => p.id === selectedId);
-                              if (foundProduct) {
-                                handleItemChange(idx, 'productId', foundProduct.id);
-                                handleItemChange(idx, 'name', foundProduct.name);
-                                handleItemChange(idx, 'unitPrice', foundProduct.sellingPrice);
-                                handleItemChange(idx, 'vatRate', foundProduct.vatRate ?? businessProfile.defaultVatRate ?? 20);
-                                handleItemChange(idx, 'unit', foundProduct.unit || item.unit);
-                                if (foundProduct.image) handleItemChange(idx, 'image', foundProduct.image);
-                              }
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md font-bold text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                          >
-                            <option value="">
-                              {item.name ? item.name : (language === 'de' ? '📦 Produkt wählen...' : '📦 Select Product...')}
-                            </option>
-                            {products.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} ({formatCurrency(p.sellingPrice, currency)})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="sm:col-span-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div>
                           <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Menge' : 'Qty'}</label>
                           <input
                             type="number"
-                            min="0.1"
-                            step="any"
+                            min="1"
                             value={item.quantity}
-                            onChange={(e) => handleItemChange(idx, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-md text-center font-medium focus:outline-none"
+                            onChange={(e) => handleItemChange(idx, 'quantity', parseFloat(e.target.value) || 1)}
+                            className="w-full px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-mono font-bold"
                           />
                         </div>
 
-                        <div className="sm:col-span-3">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Einzelpreis' : 'Unit Price'}</label>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Einzelpreis (Netto)' : 'Unit Price'}</label>
                           <input
                             type="number"
-                            step="any"
+                            step="0.01"
                             value={item.unitPrice}
                             onChange={(e) => handleItemChange(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-right font-medium focus:outline-none font-mono"
+                            className="w-full px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-mono font-bold"
                           />
                         </div>
 
-                        <div className="sm:col-span-12">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Detailbeschreibung' : 'Detailed Description'}</label>
-                          <textarea
-                            rows={1}
-                            value={item.description || ''}
-                            onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                            placeholder={language === 'de' ? 'Optionale Details oder Spezifikationen' : 'Optional line item details or specifications'}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-[11px] focus:outline-none"
-                          />
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'MwSt %' : 'VAT %'}</label>
+                          <select
+                            value={item.vatRate ?? 20}
+                            onChange={(e) => handleItemChange(idx, 'vatRate', parseFloat(e.target.value) || 0)}
+                            className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold"
+                          >
+                            <option value={0}>0%</option>
+                            <option value={7}>7%</option>
+                            <option value={19}>19%</option>
+                            <option value={20}>20%</option>
+                          </select>
                         </div>
 
-                        <div className="sm:col-span-4">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Einheit' : 'Unit'}</label>
-                          <input
-                            type="text"
-                            value={item.unit}
-                            onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
-                            placeholder={language === 'de' ? 'z. B. Std, Stk, Pauschal' : 'e.g. hours, pcs'}
-                            className="w-full px-2.5 py-1 bg-white border border-slate-300 rounded-md text-xs focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="sm:col-span-4">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Rabatt' : 'Item Discount'}</label>
-                          <div className="flex">
-                            <input
-                              type="number"
-                              min="0"
-                              value={item.discount}
-                              onChange={(e) => handleItemChange(idx, 'discount', parseFloat(e.target.value) || 0)}
-                              className="w-full px-2 py-1 bg-white border border-slate-300 rounded-l-md text-right text-xs focus:outline-none"
-                            />
-                            <select
-                              value={item.discountType}
-                              onChange={(e: any) => handleItemChange(idx, 'discountType', e.target.value)}
-                              className="bg-slate-100 border-y border-r border-slate-300 rounded-r-md px-1 text-[11px]"
-                            >
-                              <option value="percentage">%</option>
-                              <option value="fixed">{currency === 'EUR' ? '€' : '$'}</option>
-                            </select>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{language === 'de' ? 'Gesamt Zeile' : 'Row Total'}</label>
+                          <div className="px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg font-mono font-bold text-slate-900">
+                            {formatCurrency(item.total, currency)}
                           </div>
                         </div>
-
-                        <div className="sm:col-span-4">
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">{t.settings.vatRate} %</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={item.vatRate}
-                            onChange={(e) => handleItemChange(idx, 'vatRate', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1 bg-white border border-slate-300 rounded-md text-right text-xs focus:outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end pt-1 border-t border-slate-200/60 font-semibold text-slate-800 text-xs">
-                        <span>{language === 'de' ? 'Gesamtpreis Position' : 'Line Total'}: <strong className="font-mono text-slate-900">{formatCurrency(item.total, currency)}</strong></span>
                       </div>
                     </div>
                   ))}

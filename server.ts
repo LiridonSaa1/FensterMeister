@@ -12,6 +12,12 @@ const PORT = 3000;
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
+// Serve public static assets (favicon, images, etc.)
+app.use(express.static(path.join(process.cwd(), 'public')));
+app.get('/favicon.ico', (req: Request, res: Response) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'favicon.ico'));
+});
+
 // Health Check API
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', time: new Date().toISOString() });

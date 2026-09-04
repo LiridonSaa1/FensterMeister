@@ -17,6 +17,7 @@ import {
   AlertCircle,
   X,
   FileCheck,
+  Loader2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useApp } from '../../context/AppContext';
@@ -91,15 +92,25 @@ export const OffersManagementView: React.FC = () => {
     }
   };
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   const handleDownloadOfferPdf = async (off: Offer) => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
     setSelectedOffer(off);
     const targetId = isDetailModalOpen ? 'offer-pdf-target' : 'offer-pdf-hidden-target';
     setTimeout(async () => {
-      await generatePdfFromElement(
-        targetId,
-        `Offer_${off.number}.pdf`,
-        true
-      );
+      try {
+        await generatePdfFromElement(
+          targetId,
+          `Offer_${off.number}.pdf`,
+          true
+        );
+      } catch (err) {
+        console.error('Offer PDF download error:', err);
+      } finally {
+        setIsGeneratingPdf(false);
+      }
     }, 120);
   };
 
@@ -442,11 +453,20 @@ export const OffersManagementView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => generatePdfFromElement('offer-pdf-target', `Offer_${selectedOffer.number}.pdf`)}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  onClick={() => handleDownloadOfferPdf(selectedOffer)}
+                  disabled={isGeneratingPdf}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{language === 'de' ? 'PDF Herunterladen' : 'Download PDF'}</span>
+                  {isGeneratingPdf ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {isGeneratingPdf
+                      ? (language === 'de' ? 'PDF wird erstellt...' : 'Generating PDF...')
+                      : (language === 'de' ? 'PDF Herunterladen' : 'Download PDF')}
+                  </span>
                 </button>
                 <button
                   type="button"

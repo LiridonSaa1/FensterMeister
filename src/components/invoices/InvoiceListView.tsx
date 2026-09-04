@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   DollarSign,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Invoice, InvoiceStatus } from '../../types';
@@ -75,15 +76,25 @@ export const InvoiceListView: React.FC = () => {
     setIsDetailModalOpen(true);
   };
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   const handleDownloadPdf = async (inv: Invoice) => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
     setSelectedInvoice(inv);
     setTimeout(async () => {
-      await generatePdfFromElement(
-        'invoice-printable-target',
-        `Invoice_${inv.prefix}${inv.number}.pdf`,
-        true
-      );
-    }, 100);
+      try {
+        await generatePdfFromElement(
+          'invoice-printable-target',
+          `Invoice_${inv.prefix}${inv.number}.pdf`,
+          true
+        );
+      } catch (err) {
+        console.error('PDF download error:', err);
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    }, 120);
   };
 
   const handlePrint = (inv: Invoice) => {
@@ -504,10 +515,15 @@ export const InvoiceListView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDownloadPdf(selectedInvoice)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+                  disabled={isGeneratingPdf}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 rounded-lg cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>PDF</span>
+                  {isGeneratingPdf ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isGeneratingPdf ? (language === 'de' ? 'PDF...' : 'Generating...') : 'PDF'}</span>
                 </button>
                 <button
                   onClick={() => handlePrint(selectedInvoice)}

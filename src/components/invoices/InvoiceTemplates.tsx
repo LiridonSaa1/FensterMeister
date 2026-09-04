@@ -10,6 +10,15 @@ interface InvoiceTemplateProps {
   previewMode?: boolean;
 }
 
+const formatDescription = (desc?: string): string => {
+  if (!desc) return '';
+  const trimmed = desc.trim();
+  if (trimmed.length > 33) {
+    return trimmed.slice(0, 33) + '...';
+  }
+  return trimmed;
+};
+
 export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
   invoice,
   offer,
@@ -23,7 +32,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
 
   const template = doc.template || businessProfile.invoiceTemplate || 'modern';
   const primaryColor = doc.primaryColor || businessProfile.invoiceColors || '#2563eb';
-  const currency = doc.currency || businessProfile.defaultCurrency || 'USD';
+  const currency = doc.currency || businessProfile.defaultCurrency || 'EUR';
   const selectedFont = doc.font || businessProfile.font || 'Plus Jakarta Sans';
   const fontClass =
     selectedFont === 'Cinzel'
@@ -42,12 +51,34 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
 
   const logoPosition = doc.logoPosition || businessProfile.logoPosition || 'left';
   const tableStyle = doc.tableStyle || businessProfile.tableStyle || 'clean';
+  const showSignature = doc.showSignature ?? true;
 
   const client = doc.clientSnapshot;
   const items = doc.items || [];
 
   const subtotal = doc.subtotal || 0;
-  const discountTotal = invoice ? invoice.discountAmount : offer?.discountAmount || 0;
+  const discountTotal = (() => {
+    if (invoice) {
+      if (typeof invoice.discountAmount === 'number' && invoice.discountAmount > 0) return invoice.discountAmount;
+      if (invoice.globalDiscount && invoice.globalDiscount > 0) {
+        const sub = invoice.subtotal || 0;
+        return invoice.globalDiscountType === 'percentage'
+          ? sub * (invoice.globalDiscount / 100)
+          : invoice.globalDiscount;
+      }
+    }
+    if (offer) {
+      if (typeof offer.discountAmount === 'number' && offer.discountAmount > 0) return offer.discountAmount;
+      if (offer.globalDiscount && offer.globalDiscount > 0) {
+        const sub = offer.subtotal || 0;
+        return offer.globalDiscountType === 'percentage'
+          ? sub * (offer.globalDiscount / 100)
+          : offer.globalDiscount;
+      }
+    }
+    return 0;
+  })();
+
   const vatTotal = doc.vatTotal || 0;
   const shipping = doc.shippingFee || 0;
   const additionalCharges = invoice?.additionalCharges || 0;
@@ -74,6 +105,19 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
   const amountCol = isDe ? 'Gesamtbetrag' : 'Amount';
   const subtotalLabel = isDe ? 'Zwischensumme' : 'Subtotal';
   const discountLabel = isDe ? 'Rabatt' : 'Discount';
+
+  const getDiscountLabelText = () => {
+    const globalDisc = invoice?.globalDiscount || offer?.globalDiscount;
+    const globalDiscType = invoice?.globalDiscountType || offer?.globalDiscountType || 'percentage';
+    if (globalDisc && globalDisc > 0) {
+      if (globalDiscType === 'percentage') {
+        return `${discountLabel} (${globalDisc}%)`;
+      } else {
+        return `${discountLabel} (${formatCurrency(globalDisc, currency)})`;
+      }
+    }
+    return discountLabel;
+  };
   const vatTaxLabel = isDe ? 'MwSt / Steuer' : 'VAT / Tax Total';
   const shippingLabel = isDe ? 'Versand & Verpackung' : 'Shipping & Handling';
   const grandTotalLabel = isDe ? 'Gesamtsumme' : 'Grand Total';
@@ -82,13 +126,71 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
   const notesLabel = isDe ? 'Hinweise / Anmerkungen' : 'Notes';
   const termsConditionsLabel = isDe ? 'Geschäftsbedingungen' : 'Terms & Conditions';
   const signatoryLabel = isDe ? 'Bevollmächtigter Unterzeichner' : 'Authorized Signatory';
+  const clientSignatureLabel = isDe ? 'Unterschrift des Kunden' : 'Client Signature';
   const bankTransferLabel = isDe ? 'Banküberweisung Details' : 'Bank Transfer Details';
+
+  // Clean footer text to remove any legacy Apex Dynamics placeholder text
+  const getCleanFooter = () => {
+    const raw = invoice?.customFooter || businessProfile.defaultInvoiceFooter || '';
+    if (!raw || /Apex Dynamics|apexdynamics|Delaware/i.test(raw)) {
+      return businessProfile.businessName ? `${businessProfile.businessName} • ${businessProfile.email}` : '';
+    }
+    return raw;
+  };
+
+  // Signature Section helper for both Client and Company signatures
+  const renderSignatureSection = () => {
+    if (!showSignature) return null;
+    const footerText = getCleanFooter();
+    return (
+      <div className="mt-auto pt-6 border-t border-slate-200 w-full">
+        <div className="grid grid-cols-2 gap-8 items-end mb-4">
+          {/* Client Signature */}
+          <div className="flex flex-col items-start">
+            <div className="h-12 w-48 flex items-end justify-center mb-1"></div>
+            <div className="border-t border-slate-400 w-48 text-left pt-1">
+              <p className="font-semibold text-slate-800 text-[11px]">{client.name}</p>
+              <p className="text-[10px] text-slate-500">{clientSignatureLabel}</p>
+            </div>
+          </div>
+
+          {/* Company Signature */}
+          <div className="flex flex-col items-end">
+            <div className="h-12 w-48 flex items-center justify-center mb-1">
+              {businessProfile.signature && !businessProfile.signature.includes('data:image/svg+xml') ? (
+                businessProfile.signature.startsWith('data:') || businessProfile.signature.startsWith('http') ? (
+                  <img
+                    src={businessProfile.signature}
+                    alt="Authorized Signature"
+                    referrerPolicy="no-referrer"
+                    className="h-full object-contain"
+                  />
+                ) : (
+                  <span className="font-playfair italic text-lg text-slate-700">{businessProfile.signature}</span>
+                )
+              ) : null}
+            </div>
+            <div className="border-t border-slate-400 w-48 text-right pt-1">
+              <p className="font-semibold text-slate-800 text-[11px]">{businessProfile.signatureName || businessProfile.businessName}</p>
+              <p className="text-[10px] text-slate-500">{businessProfile.signatureTitle || signatoryLabel}</p>
+            </div>
+          </div>
+        </div>
+
+        {footerText ? (
+          <div className="text-[10px] text-slate-400 border-t border-slate-100 pt-3 text-center">
+            <p>{footerText}</p>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   // Table style helpers
   const getTableClasses = () => {
     switch (tableStyle) {
       case 'striped':
-        return 'divide-y divide-slate-200 [&_tbody_tr:nth-child(even)]:bg-slate-50/70';
+        return 'divide-y divide-slate-200 [&_tbody_tr:nth-child(even)]:bg-slate-50';
       case 'bordered':
         return 'border border-slate-200 divide-y divide-slate-200 [&_td]:border-x [&_td]:border-slate-100 [&_th]:border-x [&_th]:border-slate-200';
       case 'minimal':
@@ -139,7 +241,8 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
     if (template === 'modern') {
       return (
         <div
-          className={`bg-white text-slate-800 p-8 sm:p-12 max-w-4xl mx-auto shadow-sm rounded-xl border border-slate-200/80 printable-invoice-container ${fontClass}`}
+          id="invoice-printable-target"
+          className={`bg-white text-slate-800 p-8 sm:p-12 max-w-4xl mx-auto shadow-sm rounded-xl border border-slate-200 printable-invoice-container flex flex-col justify-between min-h-[1050px] ${fontClass}`}
         >
         {/* Top Accent Bar */}
         <div className="h-2 rounded-t-xl mb-8 -mt-8 -mx-8 sm:-mt-12 sm:-mx-12" style={{ backgroundColor: primaryColor }} />
@@ -211,7 +314,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
                 {bankingLabel}
@@ -221,7 +324,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               <p className="text-xs font-mono text-slate-600">SWIFT / BIC: {businessProfile.swiftBic}</p>
             </div>
             {invoice?.paymentInstructions && (
-              <p className="text-[11px] text-slate-500 mt-2 italic border-t border-slate-200/60 pt-2">
+              <p className="text-[11px] text-slate-500 mt-2 italic border-t border-slate-200 pt-2">
                 {invoice.paymentInstructions}
               </p>
             )}
@@ -245,14 +348,14 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               {items.map((item, idx) => {
                 const itemImg = getLineItemImage(item);
                 return (
-                  <tr key={item.id || idx} className="hover:bg-slate-50/40">
+                  <tr key={item.id || idx} className="hover:bg-slate-50">
                     <td className="py-3 px-3">
                       <div className="flex items-start gap-2.5">
                         <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
                         <div>
                           <p className="font-semibold text-slate-900">{item.name}</p>
                         {item.description && (
-                          <p className="text-slate-500 text-[11px] mt-0.5 line-clamp-2">{item.description}</p>
+                          <p className="text-slate-500 text-[11px] mt-0.5">{formatDescription(item.description)}</p>
                         )}
                         {item.sku && <span className="text-[10px] font-mono text-slate-400">SKU: {item.sku}</span>}
                       </div>
@@ -304,7 +407,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             </div>
             {discountTotal > 0 && (
               <div className="flex justify-between py-1 border-b border-slate-100 text-emerald-600">
-                <span>{discountLabel}:</span>
+                <span>{getDiscountLabelText()}:</span>
                 <span className="font-medium">-{formatCurrency(discountTotal, currency)}</span>
               </div>
             )}
@@ -352,33 +455,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
           </div>
         </div>
 
-        {/* Signature & Footer */}
-        <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-end gap-6 text-xs text-slate-500">
-          <div className="text-[11px] max-w-md">
-            <p>{invoice?.customFooter || businessProfile.defaultInvoiceFooter}</p>
-          </div>
-
-          {(invoice?.showSignature || businessProfile.signature) && (
-            <div className="flex flex-col items-center sm:items-end">
-              <div className="h-14 w-40 flex items-center justify-center mb-1">
-                {businessProfile.signature.startsWith('data:') || businessProfile.signature.startsWith('http') ? (
-                  <img
-                    src={businessProfile.signature}
-                    alt="Authorized Signature"
-                    referrerPolicy="no-referrer"
-                    className="h-full object-contain"
-                  />
-                ) : (
-                  <span className="font-playfair italic text-lg text-slate-700">{businessProfile.signature}</span>
-                )}
-              </div>
-              <div className="border-t border-slate-300 w-48 text-center sm:text-right pt-1">
-                <p className="font-semibold text-slate-800 text-[11px]">{businessProfile.signatureName || businessProfile.businessName}</p>
-                <p className="text-[10px] text-slate-500">{businessProfile.signatureTitle || signatoryLabel}</p>
-              </div>
-            </div>
-          )}
-        </div>
+        {renderSignatureSection()}
       </div>
     );
   }
@@ -388,7 +465,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
     return (
       <div
         id="invoice-printable-target"
-        className={`bg-white text-slate-900 p-8 sm:p-12 max-w-4xl mx-auto rounded-none border border-slate-200 printable-invoice-container ${fontClass}`}
+        className={`bg-white text-slate-900 p-8 sm:p-12 max-w-4xl mx-auto rounded-none border border-slate-200 printable-invoice-container flex flex-col justify-between min-h-[1050px] ${fontClass}`}
       >
         <div className="flex justify-between items-baseline border-b border-slate-900 pb-4 mb-8">
           <div>
@@ -442,7 +519,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
                         <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
                         <div>
                           <p className="font-medium text-slate-900">{item.name}</p>
-                          {item.description && <p className="text-slate-500 text-[11px] mt-0.5">{item.description}</p>}
+                          {item.description && <p className="text-slate-500 text-[11px] mt-0.5">{formatDescription(item.description)}</p>}
                         </div>
                       </div>
                     </td>
@@ -462,6 +539,12 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               <span>{subtotalLabel}</span>
               <span>{formatCurrency(subtotal, currency)}</span>
             </div>
+            {discountTotal > 0 && (
+              <div className="flex justify-between text-emerald-600 font-medium">
+                <span>{getDiscountLabelText()}</span>
+                <span>-{formatCurrency(discountTotal, currency)}</span>
+              </div>
+            )}
             {vatTotal > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>{vatTaxLabel} ({businessProfile.defaultVatRate}%)</span>
@@ -492,6 +575,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             <p>{businessProfile.website}</p>
           </div>
         </div>
+        {renderSignatureSection()}
       </div>
     );
   }
@@ -501,7 +585,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
     return (
       <div
         id="invoice-printable-target"
-        className={`bg-white text-slate-800 p-8 sm:p-12 max-w-4xl mx-auto rounded-lg border border-slate-200 shadow-sm printable-invoice-container ${fontClass}`}
+        className={`bg-white text-slate-800 p-8 sm:p-12 max-w-4xl mx-auto rounded-lg border border-slate-200 shadow-sm printable-invoice-container flex flex-col justify-between min-h-[1050px] ${fontClass}`}
       >
         <div className="flex justify-between items-start pb-6 border-b-2 border-slate-800">
           <div className="flex items-center gap-4">
@@ -564,13 +648,13 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
           <tbody className="divide-y divide-slate-200">
             {items.map((item, idx) => {
               return (
-                <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : ''}>
+                <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50' : ''}>
                   <td className="py-2.5 px-3">
                     <div className="flex items-start gap-2.5">
                       <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
                       <div>
                         <span className="font-bold text-slate-900">{item.name}</span>
-                        {item.description && <p className="text-slate-500 text-[11px]">{item.description}</p>}
+                        {item.description && <p className="text-slate-500 text-[11px]">{formatDescription(item.description)}</p>}
                       </div>
                     </div>
                   </td>
@@ -598,6 +682,12 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               <span>{subtotalLabel}:</span>
               <span className="font-medium">{formatCurrency(subtotal, currency)}</span>
             </div>
+            {discountTotal > 0 && (
+              <div className="flex justify-between text-emerald-600 font-medium">
+                <span>{getDiscountLabelText()}:</span>
+                <span>-{formatCurrency(discountTotal, currency)}</span>
+              </div>
+            )}
             {vatTotal > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>{vatTaxLabel}:</span>
@@ -616,6 +706,8 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             )}
           </div>
         </div>
+
+        {renderSignatureSection()}
       </div>
     );
   }
@@ -625,7 +717,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
     return (
       <div
         id="invoice-printable-target"
-        className={`bg-white text-slate-800 max-w-4xl mx-auto rounded-xl border border-slate-200 overflow-hidden shadow-sm printable-invoice-container ${fontClass}`}
+        className={`bg-white text-slate-800 max-w-4xl mx-auto rounded-xl border border-slate-200 overflow-hidden shadow-sm printable-invoice-container flex flex-col justify-between min-h-[1050px] ${fontClass}`}
       >
         {/* Full colored Corporate Banner */}
         <div className="p-8 text-white flex justify-between items-center" style={{ backgroundColor: primaryColor }}>
@@ -684,7 +776,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
                         <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-slate-200" />
                         <div>
                           <p className="font-bold text-slate-900">{item.name}</p>
-                          {item.description && <p className="text-slate-500 text-[11px]">{item.description}</p>}
+                          {item.description && <p className="text-slate-500 text-[11px]">{formatDescription(item.description)}</p>}
                         </div>
                       </div>
                     </td>
@@ -703,6 +795,12 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
                 <span>{subtotalLabel}:</span>
                 <span>{formatCurrency(subtotal, currency)}</span>
               </div>
+              {discountTotal > 0 && (
+                <div className="flex justify-between text-emerald-600 font-medium">
+                  <span>{getDiscountLabelText()}:</span>
+                  <span>-{formatCurrency(discountTotal, currency)}</span>
+                </div>
+              )}
               {vatTotal > 0 && (
                 <div className="flex justify-between text-slate-600">
                   <span>{vatTaxLabel} ({businessProfile.defaultVatRate}%):</span>
@@ -721,6 +819,8 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
               )}
             </div>
           </div>
+
+          {renderSignatureSection()}
         </div>
       </div>
     );
@@ -730,7 +830,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
   return (
     <div
       id="invoice-printable-target"
-      className={`bg-[#fdfcfb] text-slate-800 p-8 sm:p-14 max-w-4xl mx-auto rounded-lg border border-amber-900/10 shadow-sm printable-invoice-container font-playfair ${fontClass}`}
+      className={`bg-[#fdfcfb] text-slate-800 p-8 sm:p-14 max-w-4xl mx-auto rounded-lg border border-amber-900/10 shadow-sm printable-invoice-container font-playfair flex flex-col justify-between min-h-[1050px] ${fontClass}`}
     >
       <div className="border-b-2 border-amber-900/20 pb-8 text-center">
         {businessProfile.logo && (
@@ -779,7 +879,7 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
                     <WindowItemImage item={item} className="w-9 h-9 rounded-lg shrink-0 border border-amber-900/20" />
                     <div>
                       <p className="font-semibold text-slate-900">{item.name}</p>
-                    {item.description && <p className="text-slate-500 font-sans text-[11px]">{item.description}</p>}
+                    {item.description && <p className="text-slate-500 font-sans text-[11px]">{formatDescription(item.description)}</p>}
                   </div>
                 </div>
               </td>
@@ -798,6 +898,12 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
             <span>{subtotalLabel}:</span>
             <span>{formatCurrency(subtotal, currency)}</span>
           </div>
+          {discountTotal > 0 && (
+            <div className="flex justify-between text-emerald-700 font-medium font-sans">
+              <span>{getDiscountLabelText()}:</span>
+              <span>-{formatCurrency(discountTotal, currency)}</span>
+            </div>
+          )}
           {vatTotal > 0 && (
             <div className="flex justify-between text-slate-600">
               <span>{vatTaxLabel}:</span>
@@ -810,6 +916,8 @@ export const InvoiceDocumentRenderer: React.FC<InvoiceTemplateProps> = ({
           </div>
         </div>
       </div>
+
+      {renderSignatureSection()}
     </div>
   );
 };

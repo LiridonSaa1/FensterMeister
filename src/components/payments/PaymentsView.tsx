@@ -74,7 +74,7 @@ export const PaymentsView: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
           <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Zahlungseingänge Gesamt' : 'Total Payment Count'}</span>
           <p className="text-xl font-bold text-slate-900 mt-1">{payments.length}</p>
@@ -86,12 +86,6 @@ export const PaymentsView: React.FC = () => {
               payments.reduce((acc, p) => acc + p.amount, 0),
               currency
             )}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 block">{language === 'de' ? 'Letzte Zahlung' : 'Latest Payment'}</span>
-          <p className="text-sm font-bold text-slate-800 mt-1">
-            {payments.length > 0 ? formatDate(payments[0].date) : '-'}
           </p>
         </div>
       </div>
@@ -142,8 +136,66 @@ export const PaymentsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Payments Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      {/* Mobile Cards View (Screens < 640px) */}
+      <div className="space-y-3 sm:hidden">
+        {filteredPayments.length === 0 ? (
+          <div className="bg-white p-8 rounded-2xl border border-slate-200/80 text-center text-slate-400 text-xs">
+            <CreditCard className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+            <p className="font-semibold text-slate-600">
+              {language === 'de' ? 'Keine Zahlungseinträge vorhanden' : 'No Payment Transactions Found'}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {language === 'de'
+                ? 'Sobald Sie eine Zahlung für eine Rechnung verbuchen, erscheint diese in der Übersicht.'
+                : 'Transactions recorded against customer invoices will automatically appear here.'}
+            </p>
+          </div>
+        ) : (
+          filteredPayments.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => {
+                setSelectedInvoiceId(p.invoiceId);
+                setCurrentTab('invoices');
+              }}
+              className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3 cursor-pointer hover:border-slate-300 transition-all"
+            >
+              {/* Top Row: Ref & Status */}
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-slate-900 text-xs">
+                  {p.reference}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <CheckCircle2 className="w-3 h-3" /> {language === 'de' ? 'Verbucht' : 'Settled'}
+                </span>
+              </div>
+
+              {/* Client & Invoice info */}
+              <div className="flex items-start justify-between gap-3 pt-1 border-t border-slate-100">
+                <div>
+                  <p className="font-bold text-slate-900 text-xs">{p.clientName}</p>
+                  <p className="text-[11px] text-blue-600 font-mono font-semibold mt-0.5">
+                    {p.invoiceNumber}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {formatDate(p.date)} • {getMethodLabel(p.method)}
+                  </p>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-slate-400 block uppercase font-medium">{t.payments.amount}</span>
+                  <span className="text-sm font-bold text-emerald-600 font-mono block">
+                    +{formatCurrency(p.amount, currency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View (>= 640px) */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse">
             <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200">

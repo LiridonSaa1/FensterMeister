@@ -378,8 +378,105 @@ export const EmailHistoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Logs Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      {/* Mobile Cards View (< 640px) */}
+      <div className="space-y-3 sm:hidden">
+        {filteredLogs.length > 0 ? (
+          filteredLogs.map((log) => (
+            <div
+              key={log.id}
+              className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3 hover:border-slate-300 transition-all"
+            >
+              {/* Top Row: Document # & Status */}
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => handleViewDocument(log)}
+                  className="font-mono font-bold text-blue-600 hover:underline inline-flex items-center gap-1 cursor-pointer text-xs"
+                >
+                  <span>{log.entityNumber || 'DOC'}</span>
+                  <ExternalLink className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] text-slate-400 uppercase font-normal">({log.entityType})</span>
+                </button>
+
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  log.status === 'delivered'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}>
+                  {log.status === 'delivered' ? (
+                    <><CheckCircle2 className="w-3 h-3" /> Delivered</>
+                  ) : (
+                    <><AlertCircle className="w-3 h-3" /> Failed</>
+                  )}
+                </span>
+              </div>
+
+              {/* Recipient & Subject Info */}
+              <div className="pt-2 border-t border-slate-100 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-900">{log.recipientName || 'Client'}</span>
+                  <span className="text-[11px] text-slate-400">
+                    {new Date(log.sentAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 truncate">{log.recipient}</p>
+                <p className="text-xs font-medium text-slate-800 pt-1 line-clamp-2">{log.subject}</p>
+              </div>
+
+              {/* Gateway & Action Buttons Row */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  {log.provider === 'brevo' ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      <ShieldCheck className="w-3 h-3" /> Brevo
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+                      Direct
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setSelectedLog(log);
+                      setActiveDetailTab('html');
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                    <span>View</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleResend(log.id)}
+                    className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
+                    title="Resend"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => deleteEmailLog(log.id)}
+                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+            <Mail className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            <p className="font-semibold text-slate-600">No Outbound Dispatch Records</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View (>= 640px) */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse">
             <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   DollarSign,
   CheckCircle2,
@@ -53,8 +53,9 @@ export const DashboardView: React.FC = () => {
   } = useApp();
 
   const currency = businessProfile.defaultCurrency || 'EUR';
+  const [chartInterval, setChartInterval] = useState<'monthly' | 'quarterly'>('monthly');
 
-  // 1. Metric Calculations
+  // 1. Metric Calculations from REAL data
   const totalRevenue = invoices.reduce((acc, inv) => acc + (inv.amountPaid || 0), 0);
   const totalInvoiced = invoices.reduce((acc, inv) => acc + inv.total, 0);
   const paidInvoices = invoices.filter((i) => i.status === 'paid');
@@ -80,33 +81,86 @@ export const DashboardView: React.FC = () => {
     return pDate.getFullYear() === currentYear && pDate.getMonth() === currentMonth ? acc + p.amount : acc;
   }, 0);
 
-  // 2. Charts Data
-  // Monthly Revenue Trend (Last 8 months)
-  const monthlyRevenueData = [
-    { month: language === 'de' ? 'Jan' : 'Jan', revenue: 14200, target: 12000, collected: 13800 },
-    { month: language === 'de' ? 'Feb' : 'Feb', revenue: 18500, target: 15000, collected: 17200 },
-    { month: language === 'de' ? 'Mär' : 'Mar', revenue: 22400, target: 18000, collected: 21900 },
-    { month: language === 'de' ? 'Apr' : 'Apr', revenue: 19800, target: 20000, collected: 19100 },
-    { month: language === 'de' ? 'Mai' : 'May', revenue: 26500, target: 22000, collected: 25800 },
-    { month: language === 'de' ? 'Jun' : 'Jun', revenue: 31200, target: 25000, collected: 29400 },
-    { month: language === 'de' ? 'Jul' : 'Jul', revenue: 28900, target: 28000, collected: 27500 },
-    { month: language === 'de' ? 'Aug' : 'Aug', revenue: 35600, target: 30000, collected: 32800 },
-  ];
+  // 2. Charts Data (Real Data Aggregation)
+  const revenueChartData = useMemo(() => {
+    const monthsDe = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = language === 'de' ? monthsDe : monthsEn;
 
-  // Invoice Status Distribution Data for Pie Chart
-  const statusPieData = [
-    { name: t.status.paid, value: paidInvoices.length || 1, color: '#10b981' },
-    { name: t.status.unpaid, value: unpaidInvoices.length || 1, color: '#3b82f6' },
-    { name: t.status.overdue, value: overdueInvoices.length || 1, color: '#ef4444' },
-    { name: t.status.draft, value: draftInvoices.length || 1, color: '#94a3b8' },
-  ];
+    const now = new Date();
+    const currentYr = now.getFullYear();
+    const currentM = now.getMonth();
 
-  // Monthly Income Comparison
-  const monthlyIncomeData = [
-    { name: 'Q1 Total', invoiced: 55100, received: 52900 },
-    { name: 'Q2 Total', invoiced: 77500, received: 74300 },
-    { name: 'Q3 (Current)', invoiced: 64500, received: 60300 },
-  ];
+    if (chartInterval === 'quarterly') {
+      const quarters = [
+        { month: language === 'de' ? 'Q1 (Jan-Mär)' : 'Q1 (Jan-Mar)', revenue: 0, collected: 0 },
+        { month: language === 'de' ? 'Q2 (Apr-Jun)' : 'Q2 (Apr-Jun)', revenue: 0, collected: 0 },
+        { month: language === 'de' ? 'Q3 (Jul-Sep)' : 'Q3 (Jul-Sep)', revenue: 0, collected: 0 },
+        { month: language === 'de' ? 'Q4 (Okt-Dez)' : 'Q4 (Oct-Dec)', revenue: 0, collected: 0 },
+      ];
+
+      invoices.forEach((inv) => {
+        if (!inv.date) return;
+        const d = new Date(inv.date);
+        if (isNaN(d.getTime())) return;
+        if (d.getFullYear() === currentYr || invoices.length <= 15) {
+          const qIdx = Math.floor(d.getMonth() / 3);
+          if (qIdx >= 0 && qIdx < 4) {
+            quarters[qIdx].revenue += inv.total || 0;
+          }
+        }
+      });
+
+      payments.forEach((p) => {
+        if (!p.date) return;
+        const d = new Date(p.date);
+        if (isNaN(d.getTime())) return;
+        if (d.getFullYear() === currentYr || payments.length <= 15) {
+          const qIdx = Math.floor(d.getMonth() / 3);
+          if (qIdx >= 0 && qIdx < 4) {
+            quarters[qIdx].collected += p.amount || 0;
+          }
+        }
+      });
+
+      return quarters;
+    }
+
+    // Monthly Interval (Aggregated from real invoices & payments)
+    const monthMap = Array.from({ length: 12 }, (_, i) => ({
+      month: monthNames[i],
+      monthIndex: i,
+      revenue: 0,
+      collected: 0,
+    }));
+
+    invoices.forEach((inv) => {
+      if (!inv.date) return;
+      const d = new Date(inv.date);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() === currentYr || invoices.length <= 15) {
+        const mIdx = d.getMonth();
+        if (mIdx >= 0 && mIdx < 12) {
+          monthMap[mIdx].revenue += inv.total || 0;
+        }
+      }
+    });
+
+    payments.forEach((p) => {
+      if (!p.date) return;
+      const d = new Date(p.date);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() === currentYr || payments.length <= 15) {
+        const mIdx = d.getMonth();
+        if (mIdx >= 0 && mIdx < 12) {
+          monthMap[mIdx].collected += p.amount || 0;
+        }
+      }
+    });
+
+    const maxIndex = Math.max(currentM, 5);
+    return monthMap.slice(0, maxIndex + 1);
+  }, [invoices, payments, language, chartInterval]);
 
   // Recent lists
   const recentInvoices = invoices.slice(0, 5);
@@ -150,10 +204,15 @@ export const DashboardView: React.FC = () => {
           <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">{t.dashboard.totalRevenue}</p>
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(totalRevenue, currency)}</h3>
-            <span className="text-emerald-500 text-xs font-bold">+12.5%</span>
+            <span className="text-emerald-500 text-xs font-bold">
+              {invoices.length > 0 ? `${Math.round((totalRevenue / (totalInvoiced || 1)) * 100)}%` : '0%'}
+            </span>
           </div>
           <div className="w-full bg-slate-100 h-1 rounded-full mt-3">
-            <div className="bg-emerald-500 w-3/4 h-full rounded-full" />
+            <div
+              className="bg-emerald-500 h-full rounded-full"
+              style={{ width: `${totalInvoiced > 0 ? Math.min(100, Math.round((totalRevenue / totalInvoiced) * 100)) : 0}%` }}
+            />
           </div>
         </div>
 
@@ -206,22 +265,32 @@ export const DashboardView: React.FC = () => {
 
       {/* Charts & Activity Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Analysis (Last 6-8 Months) */}
+        {/* Revenue Analysis (Real Invoices & Payments) */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h4 className="font-bold text-slate-700">{t.dashboard.revenueAnalysis}</h4>
+            <div>
+              <h4 className="font-bold text-slate-700">{t.dashboard.revenueAnalysis}</h4>
+              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {language === 'de' ? 'Echte Systemdaten (Fakturiert & Zahlungseingang)' : 'Real System Data (Invoiced vs Cash Collected)'}
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400 font-medium">{language === 'de' ? 'Intervall:' : 'Interval:'}</span>
-              <select className="text-xs bg-slate-50 border-slate-200 border rounded-md px-2.5 py-1 text-slate-700 outline-none">
-                <option>{language === 'de' ? 'Monatlich' : 'Monthly'}</option>
-                <option>{language === 'de' ? 'Quartalsweise' : 'Quarterly'}</option>
+              <select
+                value={chartInterval}
+                onChange={(e: any) => setChartInterval(e.target.value)}
+                className="text-xs bg-slate-50 border-slate-200 border rounded-md px-2.5 py-1 text-slate-700 outline-none cursor-pointer font-semibold"
+              >
+                <option value="monthly">{language === 'de' ? 'Monatlich' : 'Monthly'}</option>
+                <option value="quarterly">{language === 'de' ? 'Quartalsweise' : 'Quarterly'}</option>
               </select>
             </div>
           </div>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={revenueChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
@@ -234,13 +303,18 @@ export const DashboardView: React.FC = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : `${v}`)}
+                />
                 <Tooltip
                   formatter={(value: any) => [`${formatCurrency(Number(value), currency)}`, '']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '8px', color: '#fff', fontSize: '12px', border: 'none' }}
+                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', color: '#fff', fontSize: '12px', border: 'none' }}
                 />
-                <Area type="monotone" dataKey="revenue" name={language === 'de' ? 'Fakturiertes Volumen' : 'Invoiced Revenue'} stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
-                <Area type="monotone" dataKey="collected" name={language === 'de' ? 'Zahlungseingang' : 'Cash Collected'} stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCollected)" />
+                <Area type="monotone" dataKey="revenue" name={language === 'de' ? 'Fakturiertes Volumen' : 'Invoiced Revenue'} stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area type="monotone" dataKey="collected" name={language === 'de' ? 'Zahlungseingang (Echtzeit)' : 'Cash Collected (Real)'} stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCollected)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

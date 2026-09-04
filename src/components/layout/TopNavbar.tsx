@@ -7,6 +7,7 @@ import {
   Users,
   FileSpreadsheet,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NavigationTab } from '../../types';
@@ -16,7 +17,7 @@ interface TopNavbarProps {
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleMobileMenu }) => {
-  const { currentTab, setCurrentTab, invoices, clients, products, offers, businessProfile, setSelectedInvoiceId, setSelectedClientId, setSelectedOfferId, t, language } = useApp();
+  const { currentTab, setCurrentTab, invoices, clients, products, offers, businessProfile, setSelectedInvoiceId, setSelectedClientId, setSelectedOfferId, t, language, logout, currentUserEmail } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -212,14 +213,23 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleMobileMenu }) => {
         </div>
 
         {/* User Profile Info & Avatar */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-slate-800">{businessProfile.contactPerson || 'Alexander Wright'}</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Admin Profile</p>
+            <p className="text-xs font-bold text-slate-800">{businessProfile.contactPerson || 'FensterMeister Admin'}</p>
+            <p className="text-[10px] text-slate-400 font-mono">{currentUserEmail || 'fenster@meister.com'}</p>
           </div>
-          <div className="w-9 h-9 bg-slate-200 rounded-full border-2 border-white overflow-hidden shadow-sm flex items-center justify-center font-bold text-slate-500 text-xs">
-            {businessProfile.contactPerson ? businessProfile.contactPerson.slice(0, 2).toUpperCase() : 'AW'}
+          <div className="w-9 h-9 bg-slate-900 text-white rounded-full border-2 border-white shadow-sm flex items-center justify-center font-bold text-xs">
+            FM
           </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={logout}
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title={language === 'de' ? 'Abmelden' : 'Logout'}
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

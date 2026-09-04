@@ -135,16 +135,21 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
     const issueDateFormatted = formatDate(doc.date);
     const dueDateFormatted = invoice ? formatDate(invoice.dueDate) : formatDate(offer?.expiryDate);
 
-    let rawSubject = defaults.subject;
-    let rawBody = defaults.body;
+    const isEnglishTpl = (str?: string) => {
+      if (!str) return false;
+      return (
+        str.includes('Dear ') ||
+        str.includes('Hello ') ||
+        str.includes('Please find attached') ||
+        str.includes('Thank you for your business') ||
+        str.includes('Summary of charges') ||
+        str.includes('Balance Due') ||
+        str.includes('Payment Due Date')
+      );
+    };
 
-    // Use custom user-edited template subject/body if available and present
-    if (tpl?.subject && (!isDe || !tpl.subject.includes('Invoice #'))) {
-      rawSubject = tpl.subject;
-    }
-    if (tpl?.body && (!isDe || !tpl.body.includes('Dear '))) {
-      rawBody = tpl.body;
-    }
+    let rawSubject = (tpl?.subject && !isEnglishTpl(tpl.subject)) ? tpl.subject : defaults.subject;
+    let rawBody = (tpl?.body && !isEnglishTpl(tpl.body)) ? tpl.body : defaults.body;
 
     let replacedSubject = rawSubject
       .replace(/{invoice_number}/g, docNumber)

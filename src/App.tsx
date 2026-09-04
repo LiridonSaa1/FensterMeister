@@ -13,10 +13,15 @@ import { OfferBuilderView } from './components/offers/OfferBuilderView';
 import { PaymentsView } from './components/payments/PaymentsView';
 import { EmailHistoryView } from './components/email/EmailHistoryView';
 import { SettingsView } from './components/settings/SettingsView';
+import { LoginView } from './components/auth/LoginView';
 
 const MainContent: React.FC = () => {
-  const { currentTab, selectedInvoiceId, selectedOfferId } = useApp();
+  const { currentTab, selectedInvoiceId, selectedOfferId, isAuthenticated } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex font-sans antialiased selection:bg-blue-600 selection:text-white">

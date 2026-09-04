@@ -36,6 +36,22 @@ const convertImageToBase64 = (url: string): Promise<string> => {
   });
 };
 
+const hexToRgb = (hex: string): { r: number; g: number; b: number; a: number } | null => {
+  let h = hex.replace('#', '').trim();
+  if (h.length === 3) {
+    h = h.split('').map(c => c + c).join('');
+  }
+  if (h.length === 6) {
+    const num = parseInt(h, 16);
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255, a: 1 };
+  }
+  if (h.length === 8) {
+    const num = parseInt(h, 16);
+    return { r: (num >> 24) & 255, g: (num >> 16) & 255, b: (num >> 8) & 255, a: Number(((num & 255) / 255).toFixed(3)) };
+  }
+  return null;
+};
+
 // Standalone pure JS converter for oklch(L C H [/ A]) -> rgb(r, g, b) / rgba(r, g, b, a)
 const parseOklchToRgba = (colorStr: string): string | null => {
   const innerMatch = colorStr.match(/oklch\((.+)\)/i);
@@ -142,49 +158,188 @@ const parseOklabToRgba = (colorStr: string): string | null => {
   return `rgb(${R}, ${G}, ${B})`;
 };
 
+const applyAlphaToRgb = (rgbStr: string, alpha: number): string => {
+  const obj = parseToRgbObj(rgbStr);
+  if (obj) {
+    const finalAlpha = Number((obj.a * alpha).toFixed(3));
+    return `rgba(${obj.r}, ${obj.g}, ${obj.b}, ${finalAlpha})`;
+  }
+  return rgbStr;
+};
+
+const parseToRgbObj = (str: string): { r: number; g: number; b: number; a: number } | null => {
+  if (!str || typeof str !== 'string') return null;
+  const s = str.trim();
+  if (s.startsWith('#')) return hexToRgb(s);
+
+  if (s === 'transparent') return { r: 255, g: 255, b: 255, a: 0 };
+  if (s === 'white') return { r: 255, g: 255, b: 255, a: 1 };
+  if (s === 'black') return { r: 0, g: 0, b: 0, a: 1 };
+
+  const match = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+  if (match) {
+    return {
+      r: parseInt(match[1], 10),
+      g: parseInt(match[2], 10),
+      b: parseInt(match[3], 10),
+      a: match[4] !== undefined ? parseFloat(match[4]) : 1,
+    };
+  }
+  return null;
+};
+
+// Standalone pure JS converter for Tailwind v4 color-mix(in space, color1 pct1, color2 pct2)
+const parseColorMixToRgba = (colorStr: string): string | null => {
+  const innerMatch = colorStr.match(/color-mix\(\s*in\s+[\w-]+\s*,\s*(.+)\s*\)/i);
+  if (!innerMatch) return null;
+
+  const content = innerMatch[1].trim();
+  const commaIdx = content.lastIndexOf(',');
+  if (commaIdx === -1) return null;
+
+  const part1 = content.slice(0, commaIdx).trim();
+  const part2 = content.slice(commaIdx + 1).trim();
+
+  const parseColorPart = (part: string): { color: string; pct: number } => {
+    const pctMatch = part.match(/\s+([\d.]+)%\s*$/);
+    let pct = 100;
+    let cStr = part;
+    if (pctMatch) {
+      pct = parseFloat(pctMatch[1]);
+      cStr = part.slice(0, part.lastIndexOf(pctMatch[0])).trim();
+    }
+    return { color: cStr, pct: pct / 100 };
+  };
+
+  const c1 = parseColorPart(part1);
+  const c2 = parseColorPart(part2);
+
+  // If part2 is transparent (standard Tailwind opacity pattern e.g. bg-slate-50/60)
+  if (c2.color === 'transparent' || c2.color.includes('/0') || c2.color.includes('/ 0')) {
+    const convertedC1 = convertSingleColor(c1.color);
+    return applyAlphaToRgb(convertedC1, c1.pct);
+  }
+
+  if (c1.color === 'transparent' || c1.color.includes('/0') || c1.color.includes('/ 0')) {
+    const convertedC2 = convertSingleColor(c2.color);
+    return applyAlphaToRgb(convertedC2, c2.pct);
+  }
+
+  const rgb1 = parseToRgbObj(convertSingleColor(c1.color));
+  const rgb2 = parseToRgbObj(convertSingleColor(c2.color));
+
+  if (!rgb1 || !rgb2) return convertSingleColor(c1.color);
+
+  const weight1 = c1.pct;
+  const weight2 = c2.pct;
+  const totalWeight = weight1 + weight2 || 1;
+
+  const r = Math.round((rgb1.r * weight1 + rgb2.r * weight2) / totalWeight);
+  const g = Math.round((rgb1.g * weight1 + rgb2.g * weight2) / totalWeight);
+  const b = Math.round((rgb1.b * weight1 + rgb2.b * weight2) / totalWeight);
+  const a = (rgb1.a * weight1 + rgb2.a * weight2) / totalWeight;
+
+  if (a < 1) {
+    return `rgba(${r}, ${g}, ${b}, ${Number(a.toFixed(3))})`;
+  }
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
 const dummyCtx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
-const unsupportedRegex = /(oklch|oklab|lab|lch|color)\((?:[^()]+|\([^()]*\))*\)/gi;
+const unsupportedRegex = /(oklch|oklab|color-mix|lab|lch|color)\((?:[^()]+|\([^()]*\))*\)/gi;
 
 const convertSingleColor = (colorMatch: string): string => {
   if (!colorMatch || typeof colorMatch !== 'string') return colorMatch;
+  const str = colorMatch.trim();
 
-  // 1. Try Canvas 2D API conversion
+  // 1. MUST test color-mix FIRST before oklch / oklab to preserve transparency
+  if (/color-mix\(/i.test(str)) {
+    const parsed = parseColorMixToRgba(str);
+    if (parsed) return parsed;
+  }
+
+  // 2. Pure JS math fallback for oklch
+  if (/oklch\(/i.test(str)) {
+    const parsed = parseOklchToRgba(str);
+    if (parsed) return parsed;
+  }
+
+  // 3. Pure JS math fallback for oklab
+  if (/oklab\(/i.test(str)) {
+    const parsed = parseOklabToRgba(str);
+    if (parsed) return parsed;
+  }
+
+  // 4. Check if already standard Hex or RGB/RGBA
+  const obj = parseToRgbObj(str);
+  if (obj) {
+    return obj.a < 1 ? `rgba(${obj.r}, ${obj.g}, ${obj.b}, ${obj.a})` : `rgb(${obj.r}, ${obj.g}, ${obj.b})`;
+  }
+
+  // 5. Try Canvas 2D API for other standard CSS color strings
   if (dummyCtx) {
     try {
       dummyCtx.fillStyle = 'rgb(1, 2, 3)';
-      dummyCtx.fillStyle = colorMatch;
+      dummyCtx.fillStyle = str;
       const computed = dummyCtx.fillStyle;
-      if (computed && computed !== 'rgb(1, 2, 3)' && !/(oklch|oklab|lab|lch|color)\(/i.test(computed)) {
+      if (
+        computed &&
+        computed !== 'rgb(1, 2, 3)' &&
+        computed !== '#000000' &&
+        computed !== 'rgb(0, 0, 0)' &&
+        !/(oklch|oklab|color-mix|lab|lch|color)\(/i.test(computed)
+      ) {
         return computed;
       }
     } catch (e) {}
   }
 
-  // 2. Pure JS math fallback for oklch
-  if (/oklch\(/i.test(colorMatch)) {
-    const parsed = parseOklchToRgba(colorMatch);
-    if (parsed) return parsed;
-  }
-
-  // 3. Pure JS math fallback for oklab
-  if (/oklab\(/i.test(colorMatch)) {
-    const parsed = parseOklabToRgba(colorMatch);
-    if (parsed) return parsed;
-  }
-
-  // 4. Default safe fallback
-  if (colorMatch.includes('/ 0') || colorMatch.includes('/0')) {
+  // 6. Default safe transparent fallback (NEVER return solid black rgb(0,0,0))
+  if (str.includes('/ 0') || str.includes('/0') || str.includes('transparent')) {
     return 'transparent';
   }
-  return 'rgba(0, 0, 0, 0)';
+  return 'rgba(255, 255, 255, 0)';
 };
 
 const cleanString = (str: string): string => {
-  if (!str || typeof str !== 'string' || !/(oklch|oklab|lab|lch|color)\(/i.test(str)) {
+  if (!str || typeof str !== 'string' || !/(oklch|oklab|color-mix|lab|lch|color)\(/i.test(str)) {
     return str;
   }
   unsupportedRegex.lastIndex = 0;
   return str.replace(unsupportedRegex, (match) => convertSingleColor(match));
+};
+
+// Intercept getComputedStyle at window level using Proxy so html2canvas property reads never return oklab/oklch
+const patchWindowGetComputedStyle = (targetWindow: Window) => {
+  if (!targetWindow || (targetWindow as any).__oklch_proxy_patched__) return;
+  try {
+    (targetWindow as any).__oklch_proxy_patched__ = true;
+    const origFn = targetWindow.getComputedStyle.bind(targetWindow);
+
+    targetWindow.getComputedStyle = (elt: Element, pseudoElt?: string | null): CSSStyleDeclaration => {
+      const style = origFn(elt, pseudoElt);
+      return new Proxy(style, {
+        get(target, prop, receiver) {
+          if (prop === 'getPropertyValue') {
+            return (propName: string) => {
+              const val = target.getPropertyValue(propName);
+              return cleanString(val);
+            };
+          }
+          const val = Reflect.get(target, prop, receiver);
+          if (typeof val === 'string' && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(val)) {
+            return cleanString(val);
+          }
+          if (typeof val === 'function') {
+            return val.bind(target);
+          }
+          return val;
+        }
+      });
+    };
+  } catch (e) {
+    console.warn('getComputedStyle Proxy patch note:', e);
+  }
 };
 
 let isCSSPatched = false;
@@ -196,7 +351,7 @@ const patchCSSStyleDeclaration = () => {
     const origGetPropertyValue = CSSStyleDeclaration.prototype.getPropertyValue;
     CSSStyleDeclaration.prototype.getPropertyValue = function(property: string): string {
       const value = origGetPropertyValue.call(this, property);
-      if (value && typeof value === 'string' && /(oklch|oklab|lab|lch|color)\(/i.test(value)) {
+      if (value && typeof value === 'string' && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(value)) {
         return cleanString(value);
       }
       return value;
@@ -207,19 +362,22 @@ const patchCSSStyleDeclaration = () => {
 };
 
 /**
- * Converts modern unsupported CSS color declarations (oklab, oklch, lab, lch, color)
+ * Converts modern unsupported CSS color declarations (oklab, oklch, color-mix, lab, lch, color)
  * across all DOM nodes, computed styles, and stylesheets into standard RGB/Hex values so html2canvas never fails.
  */
 const sanitizeModernColors = (clonedDoc: Document) => {
   patchCSSStyleDeclaration();
+  if (clonedDoc.defaultView) {
+    patchWindowGetComputedStyle(clonedDoc.defaultView);
+  }
 
   try {
-    // 1. Fast inline style attribute sanitization (no computed style loops to prevent lag)
+    // 1. Fast inline style attribute sanitization
     const allNodes = clonedDoc.querySelectorAll('*');
     allNodes.forEach((node) => {
       if (node instanceof HTMLElement || node instanceof SVGElement) {
         const inlineStyle = node.getAttribute('style');
-        if (inlineStyle && /(oklch|oklab|lab|lch|color)\(/i.test(inlineStyle)) {
+        if (inlineStyle && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(inlineStyle)) {
           node.setAttribute('style', cleanString(inlineStyle));
         }
       }
@@ -228,7 +386,7 @@ const sanitizeModernColors = (clonedDoc: Document) => {
     // 2. Sanitize internal <style> sheets textContent
     const styleTags = clonedDoc.querySelectorAll('style');
     styleTags.forEach((tag) => {
-      if (tag.textContent && /(oklch|oklab|lab|lch|color)\(/i.test(tag.textContent)) {
+      if (tag.textContent && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(tag.textContent)) {
         tag.textContent = cleanString(tag.textContent);
       }
     });
@@ -240,11 +398,10 @@ const sanitizeModernColors = (clonedDoc: Document) => {
         try {
           const rules = Array.from(sheet.cssRules || sheet.rules || []);
           rules.forEach((rule) => {
-            if (rule.cssText && /(oklch|oklab|lab|lch|color)\(/i.test(rule.cssText)) {
-              const cleanText = cleanString(rule.cssText);
-              try {
-                (rule as any).style.cssText = cleanText;
-              } catch (e) {}
+            if (rule instanceof CSSStyleRule && rule.style && rule.style.cssText) {
+              if (/(oklch|oklab|color-mix|lab|lch|color)\(/i.test(rule.style.cssText)) {
+                rule.style.cssText = cleanString(rule.style.cssText);
+              }
             }
           });
         } catch (e) {}
@@ -290,10 +447,26 @@ export const generatePdfFromElement = async (
   }
 
   try {
-    // 2. Pre-convert all images inside element to inline Data URLs to prevent canvas taint
+    // 2. Wait for document fonts to finish loading
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+      try {
+        await document.fonts.ready;
+      } catch (e) {
+        console.warn('Font loading wait note:', e);
+      }
+    }
+
+    // 3. Pre-convert all images inside element to inline Data URLs & ensure complete load
     const imgs = Array.from(element.querySelectorAll('img'));
     await Promise.all(
       imgs.map(async (img) => {
+        if (!img.complete) {
+          await new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
+            setTimeout(res, 500);
+          });
+        }
         if (img.src && !img.src.startsWith('data:')) {
           const originalSrc = img.src;
           try {
@@ -306,10 +479,7 @@ export const generatePdfFromElement = async (
       })
     );
 
-    // Pre-sanitize live document and patch global window.getComputedStyle before html2canvas clones it
-    sanitizeModernColors(document);
-
-    // 3. Render Canvas safely without allowTaint or OKLAB/OKLCH errors
+    // 4. Render Canvas safely on cloned DOM without mutating live document
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
@@ -320,30 +490,68 @@ export const generatePdfFromElement = async (
       scrollY: 0,
       windowWidth: element.scrollWidth || 1024,
       onclone: (clonedDoc) => {
-        // Sanitize any Tailwind v4 OKLAB/OKLCH colors in cloned DOM
+        // Sanitize modern colors ONLY in cloned DOM iframe
         sanitizeModernColors(clonedDoc);
 
         const targetId = element?.id || elementId;
-        const clonedEl = clonedDoc.getElementById(targetId) || clonedDoc.querySelector('.invoice-document-root') || clonedDoc.body;
-        if (clonedEl && clonedEl instanceof HTMLElement) {
-          clonedEl.style.maxHeight = 'none';
-          clonedEl.style.height = 'auto';
-          clonedEl.style.overflow = 'visible';
-          clonedEl.style.transform = 'none';
-          clonedEl.style.position = 'static';
-          clonedEl.style.visibility = 'visible';
-          clonedEl.style.opacity = '1';
+        const clonedTarget = clonedDoc.getElementById(targetId) || clonedDoc.querySelector('.printable-invoice-container') || clonedDoc.querySelector('.invoice-document-root');
+        
+        if (clonedTarget && clonedTarget instanceof HTMLElement) {
+          // Isolate target element directly inside clonedDoc.body to strip modal wrappers, dark backdrops, and scrollbars
+          clonedDoc.body.innerHTML = '';
+          clonedDoc.body.appendChild(clonedTarget);
 
-          // Reset parent container styles
-          let parent = clonedEl.parentElement;
-          while (parent && parent !== clonedDoc.body) {
-            parent.style.position = 'static';
-            parent.style.visibility = 'visible';
-            parent.style.opacity = '1';
-            parent.style.display = 'block';
-            parent.style.left = '0px';
-            parent.style.top = '0px';
-            parent = parent.parentElement;
+          clonedDoc.body.style.backgroundColor = '#ffffff';
+          clonedDoc.body.style.margin = '0px';
+          clonedDoc.body.style.padding = '0px';
+          clonedDoc.body.style.overflow = 'visible';
+
+          clonedTarget.style.maxHeight = 'none';
+          clonedTarget.style.height = 'auto';
+          clonedTarget.style.maxWidth = '100%';
+          clonedTarget.style.width = '794px'; // Exactly 210mm at 96 DPI
+          clonedTarget.style.minHeight = '1123px'; // Exactly 297mm at 96 DPI
+          clonedTarget.style.boxSizing = 'border-box';
+          clonedTarget.style.overflow = 'visible';
+          clonedTarget.style.transform = 'none';
+          clonedTarget.style.position = 'relative';
+          clonedTarget.style.margin = '0 auto';
+          clonedTarget.style.visibility = 'visible';
+          clonedTarget.style.opacity = '1';
+          if (!clonedTarget.style.backgroundColor || clonedTarget.style.backgroundColor === 'transparent') {
+            clonedTarget.style.backgroundColor = '#ffffff';
+          }
+          clonedTarget.style.border = 'none';
+          clonedTarget.style.borderRadius = '0px';
+          clonedTarget.style.boxShadow = 'none';
+
+          // Explicitly sanitize computed styles on all cloned nodes to inline RGB/RGBA
+          try {
+            const defaultView = clonedDoc.defaultView || window;
+            const allElements = [clonedTarget, ...Array.from(clonedTarget.querySelectorAll('*'))];
+            allElements.forEach((el) => {
+              if (el instanceof HTMLElement || el instanceof SVGElement) {
+                const compStyle = defaultView.getComputedStyle(el);
+                const bg = compStyle.backgroundColor;
+                if (bg && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(bg)) {
+                  (el as HTMLElement).style.backgroundColor = cleanString(bg);
+                }
+                const c = compStyle.color;
+                if (c && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(c)) {
+                  (el as HTMLElement).style.color = cleanString(c);
+                }
+                const bc = compStyle.borderColor;
+                if (bc && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(bc)) {
+                  (el as HTMLElement).style.borderColor = cleanString(bc);
+                }
+                const bs = compStyle.boxShadow;
+                if (bs && /(oklch|oklab|color-mix|lab|lch|color)\(/i.test(bs)) {
+                  (el as HTMLElement).style.boxShadow = cleanString(bs);
+                }
+              }
+            });
+          } catch (e) {
+            console.warn('Element inline style resolution note:', e);
           }
         }
       },
@@ -351,7 +559,7 @@ export const generatePdfFromElement = async (
 
     const imgData = canvas.toDataURL('image/png', 1.0);
 
-    // 4. Create PDF
+    // 5. Create A4 PDF (210mm x 297mm)
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -363,10 +571,10 @@ export const generatePdfFromElement = async (
     const pageHeight = 297; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / (canvas.width || 1);
 
-    // Fit onto single A4 page if document is standard 1-page size (up to 325mm)
-    if (imgHeight <= 325) {
-      const renderHeight = Math.min(imgHeight, pageHeight);
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, renderHeight, undefined, 'FAST');
+    // Single-page fitting check:
+    // If document is standard 1-page size, fit it 100% full-bleed edge-to-edge on 210mm x 297mm A4
+    if (imgHeight <= 315) {
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, pageHeight, undefined, 'FAST');
     } else {
       let heightLeft = imgHeight;
       let position = 0;
@@ -385,7 +593,7 @@ export const generatePdfFromElement = async (
     const blob = pdf.output('blob');
 
     if (download) {
-      // 5. Trigger Direct Download
+      // 6. Trigger Direct Download
       try {
         pdf.save(filename);
       } catch (saveErr) {

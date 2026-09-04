@@ -31,12 +31,12 @@ export const initialBusinessProfile: BusinessProfile = {
   nextInvoiceNumber: 1001,
   offerPrefix: 'OFF-2026-',
   nextOfferNumber: 1001,
-  paymentTerms: 'Net 14 Days',
+  paymentTerms: 'Zahlbar innerhalb von 14 Tagen',
   defaultInvoiceNotes: 'Vielen Dank für Ihren Auftrag! Bitte geben Sie bei der Überweisung die Rechnungsnummer an.',
   defaultInvoiceFooter: 'FensterMeister GmbH • HRB 9843210 Berlin • info@fenstermeister.de',
   defaultTermsAndConditions: 'Zahlbar innerhalb von 14 Tagen nach Rechnungsstellung ohne Abzug. Die Ware bleibt bis zur vollständigen Bezahlung unser Eigentum.',
   defaultPaymentInstructions: 'Bankverbindung: Deutsche Bank | IBAN: DE89370400440532013000 | BIC: DEUTDEDBBER',
-  signature: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60"><path d="M 20 40 Q 50 10 70 35 T 120 25 T 160 40 T 190 30" fill="none" stroke="%231e293b" stroke-width="2.5" stroke-linecap="round"/></svg>',
+  signature: '',
   signatureName: 'Liridon Saa',
   signatureTitle: 'Geschäftsführer / CEO',
   invoiceColors: '#2563eb', // Modern Royal Blue
@@ -44,6 +44,7 @@ export const initialBusinessProfile: BusinessProfile = {
   font: 'Inter',
   logoPosition: 'left',
   tableStyle: 'clean',
+  language: 'de',
 };
 
 export const initialClients: Client[] = [];
@@ -96,128 +97,126 @@ export const initialEmailTemplates: EmailTemplate[] = [
   {
     id: 'tpl-1',
     key: 'invoice_created',
-    name: 'Invoice Created / Prepared',
-    subject: 'New Invoice #{invoice_number} from {business_name}',
-    body: `Dear {client_name},
+    name: 'Rechnung erstellt / vorbereitet',
+    subject: 'Neue Rechnung #{invoice_number} von {business_name}',
+    body: `Sehr geehrte(r) {client_name},
 
-We have created Invoice #{invoice_number} totaling {total} for your review.
+wir haben die Rechnung #{invoice_number} über {total} für Sie vorbereitet.
 
-Invoice Details:
-• Invoice Number: #{invoice_number}
-• Issue Date: {issue_date}
-• Due Date: {due_date}
-• Amount Due: {amount_due}
+Rechnungsdetails:
+• Rechnungsnummer: #{invoice_number}
+• Ausstellungsdatum: {issue_date}
+• Fälligkeitsdatum: {due_date}
+• Offener Betrag: {amount_due}
 
-A copy of your invoice is attached to this email as a PDF. Please remit payment by the due date.
+Anbei erhalten Sie Ihre Rechnung als PDF-Dokument. Bitte begleichen Sie den Betrag bis zum Fälligkeitsdatum.
 
-Best regards,
-{business_name} Billing Team`,
-    description: 'Sent when an invoice is initially prepared or generated.',
+Mit freundlichen Grüßen,
+{business_name}`,
+    description: 'Wird gesendet, wenn eine Rechnung erstellt oder vorbereitet wird.',
   },
   {
     id: 'tpl-2',
     key: 'invoice_sent',
-    name: 'Invoice Sent (Standard Delivery)',
-    subject: 'Invoice #{invoice_number} from {business_name} - Due {due_date}',
-    body: `Hello {client_name},
+    name: 'Rechnung gesendet (Standard)',
+    subject: 'Rechnung #{invoice_number} von {business_name}',
+    body: `Sehr geehrte(r) {client_name},
 
-Please find attached Invoice #{invoice_number} for {total}.
+anbei übersenden wir Ihnen Ihre Rechnung #{invoice_number} über {total}.
 
-Summary of charges:
-• Invoice: #{invoice_number}
-• Total Amount: {total}
-• Due Date: {due_date}
+• Rechnungsnummer: #{invoice_number}
+• Offener Betrag: {amount_due}
+• Fälligkeitsdatum: {due_date}
 
-You can review the attached PDF for complete itemization and bank wire instructions.
+Vielen Dank für Ihren Auftrag!
 
-Thank you for your business!
+Mit freundlichen Grüßen,
 {business_name}`,
-    description: 'Standard email template sent when delivering an invoice to a client.',
+    description: 'Standard-E-Mail-Vorlage beim Versenden einer Rechnung an den Kunden.',
   },
   {
     id: 'tpl-3',
     key: 'payment_reminder',
-    name: 'Payment Reminder (Approaching Due Date)',
-    subject: 'Friendly Reminder: Invoice #{invoice_number} is due soon',
-    body: `Hi {client_name},
+    name: 'Zahlungserinnerung',
+    subject: 'Erinnerung: Rechnung #{invoice_number} ist demnächst fällig',
+    body: `Sehr geehrte(r) {client_name},
 
-This is a friendly reminder that Invoice #{invoice_number} in the amount of {amount_due} is scheduled for payment on {due_date}.
+dies ist eine freundliche Erinnerung, dass Ihre Rechnung #{invoice_number} über {amount_due} am {due_date} fällig ist.
 
-If you have already processed this payment, please disregard this notice. Otherwise, please find the invoice PDF attached for your convenience.
+Falls Sie die Zahlung bereits geleistet haben, bitten wir Sie, diese Nachricht zu entschuldigen. Anbei finden Sie die Rechnung als PDF.
 
-Thank you,
+Mit freundlichen Grüßen,
 {business_name}`,
-    description: 'Sent 3-5 days before an invoice reaches its due date.',
+    description: 'Wird vor dem Fälligkeitsdatum der Rechnung gesendet.',
   },
   {
     id: 'tpl-4',
     key: 'invoice_overdue',
-    name: 'Invoice Overdue Notice',
-    subject: 'URGENT: Invoice #{invoice_number} is Overdue',
-    body: `Dear {client_name},
+    name: 'Mahnung / Überfällige Rechnung',
+    subject: 'MAHNUNG: Überfällige Rechnung #{invoice_number}',
+    body: `Sehr geehrte(r) {client_name},
 
-Our records indicate that Invoice #{invoice_number} for {amount_due}, which was due on {due_date}, remains unpaid.
+laut unseren Unterlagen ist die Rechnung #{invoice_number} über {amount_due} (Fälligkeitsdatum: {due_date}) noch nicht beglichen.
 
-Please arrange payment as soon as possible to keep your account current and avoid service disruptions.
+Bitte begleichen Sie den offenen Betrag umgehend.
 
-If there are any questions regarding this invoice, please reach out to {business_email}.
+Bei Fragen wenden Sie sich bitte an {business_email}.
 
-Sincerely,
-Finance Department
+Mit freundlichen Grüßen,
 {business_name}`,
-    description: 'Sent when an invoice passes its due date without full payment.',
+    description: 'Wird gesendet, wenn eine Rechnung das Fälligkeitsdatum überschritten hat.',
   },
   {
     id: 'tpl-5',
     key: 'payment_received',
-    name: 'Payment Confirmation & Receipt',
-    subject: 'Payment Received: Thank you! (Invoice #{invoice_number})',
-    body: `Dear {client_name},
+    name: 'Zahlungsbestätigung & Quittung',
+    subject: 'Zahlungsbestätigung für Rechnung #{invoice_number}',
+    body: `Sehr geehrte(r) {client_name},
 
-We have received your payment of {payment_amount} for Invoice #{invoice_number}.
+wir haben Ihre Zahlung über {payment_amount} für die Rechnung #{invoice_number} dankend erhalten.
 
-• Remaining Balance: {amount_due}
-• Payment Status: {status}
+• Restbetrag: {amount_due}
+• Status: {status}
 
-Thank you for your prompt payment! We truly appreciate doing business with you.
+Vielen Dank für Ihre zügige Überweisung!
 
-Warm regards,
+Mit freundlichen Grüßen,
 {business_name}`,
-    description: 'Sent immediately when a payment is logged against an invoice.',
+    description: 'Wird gesendet, wenn eine Zahlung für eine Rechnung erfasst wird.',
   },
   {
     id: 'tpl-6',
     key: 'offer_sent',
-    name: 'Quotation / Offer Sent',
-    subject: 'Business Proposal & Quotation #{offer_number} from {business_name}',
-    body: `Hello {client_name},
+    name: 'Angebot / Kostenvoranschlag gesendet',
+    subject: 'Angebot #{offer_number} von {business_name}',
+    body: `Hallo {client_name},
 
-We are excited to share our official proposal and quotation #{offer_number} for your upcoming project.
+wir freuen uns, Ihnen unser offizielles Angebot #{offer_number} für Ihr anstehendes Projekt zu übermitteln.
 
-• Offer Number: #{offer_number}
-• Total Estimate: {total}
-• Valid Until: {expiry_date}
+• Angebotsnummer: #{offer_number}
+• Gesamtsumme: {total}
+• Gültig bis: {expiry_date}
 
-Please find the detailed offer document attached. Feel free to contact us with any questions or revisions.
+Anbei finden Sie das detaillierte Angebotsdokument als PDF. Bei Fragen oder Änderungswünschen stehen wir Ihnen jederzeit gerne zur Verfügung.
 
-Best regards,
+Mit freundlichen Grüßen,
 {business_name}`,
-    description: 'Sent when sending an offer/quote to a prospective client.',
+    description: 'Wird gesendet, wenn ein Angebot an einen Kunden übermittelt wird.',
   },
   {
     id: 'tpl-7',
     key: 'offer_accepted',
-    name: 'Offer Accepted Confirmation',
-    subject: 'Confirmation: Proposal #{offer_number} Accepted',
-    body: `Dear {client_name},
+    name: 'Angebot angenommen Bestätigung',
+    subject: 'Bestätigung: Angebot #{offer_number} angenommen',
+    body: `Sehr geehrte(r) {client_name},
 
-Thank you for accepting Offer #{offer_number}! We are thrilled to start working together on this project.
+vielen Dank für die Annahme des Angebots #{offer_number}! Wir freuen uns sehr auf die Zusammenarbeit mit Ihnen.
 
-We will generate your onboarding paperwork and initial milestone invoice shortly.
+Wir erstellen in Kürze Ihre Auftragsunterlagen.
 
-Best regards,
+Mit freundlichen Grüßen,
 {business_name}`,
-    description: 'Sent to acknowledge that an offer has been accepted.',
+    description: 'Wird gesendet, wenn ein Angebot vom Kunden angenommen wurde.',
   },
 ];
 

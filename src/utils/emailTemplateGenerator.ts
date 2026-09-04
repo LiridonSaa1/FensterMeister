@@ -153,83 +153,23 @@ export function generateDocumentEmail(
       }
 
       <!-- Attachment Banner -->
-      <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: #1e40af;">
-        📎 <strong>${isDe ? 'PDF-Anhang:' : 'PDF Attachment:'}</strong> ${isInvoice ? (isDe ? 'Rechnung' : 'Invoice') : (isDe ? 'Angebot' : 'Offer')}_${docNumber}.pdf
-      </div>
-
-      <!-- Highlight Card -->
-      <div class="highlight-card">
-        <table style="width: 100%;">
-          <tr>
-            <td style="font-size: 12px; color: #64748b;">${isDe ? 'Gesamtsumme / Betrag:' : 'Amount Due:'}</td>
-            <td style="text-align: right; font-size: 20px; font-weight: 800; color: ${primaryColor};">
-              ${amountDueFormatted}
-            </td>
-          </tr>
-          <tr>
-            <td style="font-size: 12px; color: #64748b; padding-top: 6px;">${isInvoice ? (isDe ? 'Fällig am:' : 'Due Date:') : (isDe ? 'Gültig bis:' : 'Valid Until:')}</td>
-            <td style="text-align: right; font-size: 13px; font-weight: 600; color: #334155; padding-top: 6px;">
-              ${dueDate}
-            </td>
-          </tr>
-          <tr>
-            <td style="font-size: 12px; color: #64748b; padding-top: 4px;">${isDe ? 'Ausstellungsdatum:' : 'Issue Date:'}</td>
-            <td style="text-align: right; font-size: 13px; color: #64748b; padding-top: 4px;">
-              ${issueDate}
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Line Items Overview -->
-      <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px;">
-        ${isDe ? `Positionen (${doc.items.length})` : `Document Summary (${doc.items.length} item${doc.items.length === 1 ? '' : 's'})`}
-      </h3>
-      <table class="table">
-        <thead>
-          <tr style="background-color: #f1f5f9; text-align: left; font-size: 11px; text-transform: uppercase; color: #475569;">
-            <th style="padding: 8px 12px;">${isDe ? 'Position / Beschreibung' : 'Item / Description'}</th>
-            <th style="padding: 8px 12px; text-align: center;">${isDe ? 'Menge' : 'Qty'}</th>
-            <th style="padding: 8px 12px; text-align: right;">${isDe ? 'Einzelpreis' : 'Rate'}</th>
-            <th style="padding: 8px 12px; text-align: right;">${isDe ? 'Gesamt' : 'Total'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemRowsHtml}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="padding: 10px 12px; text-align: right; font-size: 12px; color: #64748b;">${isDe ? 'Zwischensumme:' : 'Subtotal:'}</td>
-            <td style="padding: 10px 12px; text-align: right; font-size: 13px; font-weight: 600; color: #1e293b;">${formatCurrency(doc.subtotal, currency)}</td>
-          </tr>
-          ${
-            doc.vatTotal > 0
-              ? `<tr>
-                  <td colspan="3" style="padding: 4px 12px; text-align: right; font-size: 12px; color: #64748b;">${isDe ? 'zzgl. MwSt.:' : 'VAT / Tax:'}</td>
-                  <td style="padding: 4px 12px; text-align: right; font-size: 13px; color: #1e293b;">${formatCurrency(doc.vatTotal, currency)}</td>
-                </tr>`
-              : ''
-          }
-          <tr>
-            <td colspan="3" style="padding: 10px 12px; text-align: right; font-size: 14px; font-weight: 700; color: #0f172a; border-top: 1px solid #e2e8f0;">${isDe ? 'Gesamtsumme (Brutto):' : 'Total:'}</td>
-            <td style="padding: 10px 12px; text-align: right; font-size: 16px; font-weight: 800; color: ${primaryColor}; border-top: 1px solid #e2e8f0;">${totalFormatted}</td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <!-- Bank Coordinates -->
-      ${
-        business.iban || business.bankName
-          ? `
-        <div style="margin-top: 24px; padding: 16px 18px; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; font-size: 12px;">
-          <strong style="color: #0f172a; display: block; margin-bottom: 6px;">${isDe ? 'Bankverbindung & Überweisung:' : 'Remittance & Bank Coordinates:'}</strong>
-          ${business.bankName ? `<div>${isDe ? 'Bank:' : 'Bank Name:'} <strong>${business.bankName}</strong></div>` : ''}
-          ${business.iban ? `<div>IBAN: <strong>${business.iban}</strong></div>` : ''}
-          ${business.swiftBic ? `<div>BIC / SWIFT: <strong>${business.swiftBic}</strong></div>` : ''}
+      <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #1e40af;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            📎 <strong>${isDe ? 'PDF-Anhang:' : 'PDF Attachment:'}</strong> ${isInvoice ? (isDe ? 'Rechnung' : 'Invoice') : (isDe ? 'Angebot' : 'Offer')}_${docNumber}.pdf
+          </div>
+          <div style="font-weight: 700; font-size: 14px; color: ${primaryColor};">
+            ${totalFormatted}
+          </div>
         </div>
-      `
-          : ''
-      }
+        <div style="margin-top: 6px; font-size: 11.5px; color: #3b82f6;">
+          ${isInvoice ? (isDe ? 'Fällig am:' : 'Due Date:') : (isDe ? 'Gültig bis:' : 'Valid Until:')} ${dueDate}
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: #64748b; margin-top: 24px; margin-bottom: 0;">
+        ${isDe ? 'Alle weiteren Details entnehmen Sie bitte dem beigefügten PDF-Dokument.' : 'Please refer to the attached PDF document for full details.'}
+      </p>
     </div>
 
     <!-- Footer -->
@@ -257,18 +197,13 @@ ${isDe ? 'Sehr geehrte(r)' : 'Dear'} ${client.name},
 
 ${customMessage || (isDe ? `Anbei übersenden wir Ihnen Ihr ${docTypeLabel} #${docNumber}.` : `Please find attached your ${docTypeLabel.toLowerCase()} #${docNumber}.`)}
 
-${isDe ? 'ZUSAMMENFASSUNG:' : 'SUMMARY:'}
+${isDe ? 'DETAILS:' : 'DETAILS:'}
 - ${isDe ? 'Gesamtsumme:' : 'Total Amount:'} ${totalFormatted}
-- ${isDe ? 'Offener Betrag:' : 'Amount Due:'} ${amountDueFormatted}
-- ${isDe ? 'Ausstellungsdatum:' : 'Issue Date:'} ${issueDate}
 - ${isDe ? (isInvoice ? 'Fällig am:' : 'Gültig bis:') : (isInvoice ? 'Due Date:' : 'Valid Until:')} ${dueDate}
 
-${isDe ? 'BANKVERBINDUNG:' : 'BANK DETAILS:'}
-Bank: ${business.bankName || 'N/A'}
-IBAN: ${business.iban || 'N/A'}
-BIC/SWIFT: ${business.swiftBic || 'N/A'}
+${isDe ? 'Alle weiteren Details entnehmen Sie bitte dem beigefügten PDF-Dokument.' : 'Please refer to the attached PDF document for full details.'}
 
-${isDe ? 'Kontakt:' : 'Contact:'} ${business.email} | ${business.phone}
+${isDe ? 'Kontakt:' : 'Contact:'} ${business.email} ${business.phone ? `| ${business.phone}` : ''}
 ==================================================
 `;
 

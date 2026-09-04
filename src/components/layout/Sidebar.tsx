@@ -2,7 +2,6 @@ import React from 'react';
 import {
   LayoutDashboard,
   FileText,
-  PlusCircle,
   Users,
   Package,
   FileSpreadsheet,
@@ -13,6 +12,7 @@ import {
   ChevronRight,
   TrendingUp,
   AppWindow,
+  LogOut,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NavigationTab } from '../../types';
@@ -23,7 +23,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) => {
-  const { currentTab, setCurrentTab, businessProfile, setSelectedInvoiceId, setSelectedOfferId, t, language, setLanguage } = useApp();
+  const { currentTab, setCurrentTab, businessProfile, setSelectedInvoiceId, setSelectedOfferId, t, language, setLanguage, logout } = useApp();
 
   const navItems: Array<{
     id: NavigationTab;
@@ -70,11 +70,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
       label: t.nav.emailHistory,
       icon: <Mail className="w-4 h-4" />,
     },
-    {
-      id: 'settings',
-      label: t.nav.settings,
-      icon: <Settings className="w-4 h-4" />,
-    },
   ];
 
   const handleNavClick = (tab: NavigationTab) => {
@@ -100,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
         />
       )}
 
-        <aside
+      <aside
         id="app-sidebar"
         className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 border-r border-slate-800 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
@@ -118,18 +113,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
               </span>
             </div>
           </div>
-        </div>
-
-        {/* Quick Action Button */}
-        <div className="px-4 mb-2">
-          <button
-            id="sidebar-create-invoice-btn"
-            onClick={() => handleNavClick('invoice_create')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-md shadow-blue-900/30 transition-all cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>{t.nav.newInvoice}</span>
-          </button>
         </div>
 
         {/* Navigation Links */}
@@ -156,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
           })}
         </nav>
 
-        {/* Language & Settings Footer */}
+        {/* Language & Logout Footer */}
         <div className="p-4 border-t border-slate-800 space-y-2">
           {/* Quick Language Switcher */}
           <div className="flex items-center justify-between bg-slate-800/80 rounded-lg p-1 text-[11px]">
@@ -183,17 +166,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
           </div>
 
           <button
-            id="sidebar-business-profile-card"
-            onClick={() => handleNavClick('settings')}
-            className="w-full flex items-center justify-between px-3 py-2 text-slate-400 hover:text-white rounded-md transition-colors cursor-pointer"
+            type="button"
+            onClick={logout}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-slate-800 hover:bg-rose-600/20 text-slate-300 hover:text-rose-400 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <Settings className="w-4 h-4 text-slate-400" />
-              <div className="overflow-hidden text-left">
-                <span className="text-xs font-medium block">{t.nav.settings}</span>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+            <LogOut className="w-3.5 h-3.5" />
+            <span>{language === 'de' ? 'Abmelden' : 'Logout'}</span>
           </button>
         </div>
       </aside>

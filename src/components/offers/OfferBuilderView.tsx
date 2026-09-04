@@ -15,6 +15,7 @@ import {
   Layers,
   Download,
   Printer,
+  Loader2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useApp } from '../../context/AppContext';
@@ -108,14 +109,10 @@ export const OfferBuilderView: React.FC<OfferBuilderViewProps> = ({ editOfferId 
 
   // Custom Notes & Footers
   const [notes, setNotes] = useState<string>(
-    existingOffer?.notes || (language === 'de'
-      ? 'Dieses verbindliche Angebot ist 14 Kalendertage ab Ausstellungsdatum gültig.'
-      : 'This formal offer is valid for 14 calendar days from issue date.')
+    existingOffer?.notes || 'Dieses verbindliche Angebot ist 14 Kalendertage ab Ausstellungsdatum gültig.'
   );
   const [termsAndConditions, setTermsAndConditions] = useState<string>(
-    existingOffer?.termsAndConditions || (language === 'de'
-      ? '50% Anzahlung bei Auftragserteilung, 50% nach Fertigstellung und Abnahme.'
-      : '50% upfront deposit upon contract signing, 50% upon final acceptance.')
+    existingOffer?.termsAndConditions || '50% Anzahlung bei Auftragserteilung, 50% nach Fertigstellung und Abnahme.'
   );
 
   // Design Customization (inherited from businessProfile Settings or existing offer)
@@ -333,35 +330,39 @@ export const OfferBuilderView: React.FC<OfferBuilderViewProps> = ({ editOfferId 
     }
   };
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    try {
+      await generatePdfFromElement('offer-pdf-element', `Offer_${offerNumber}.pdf`, true);
+    } catch (err) {
+      console.error('Offer PDF download error:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-24">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+    <div className="space-y-6 max-w-8xl mx-auto pb-16">
+      {/* Top Action Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
-              {language === 'de' ? 'Angebot-Konfigurator' : 'Offer Builder'}
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-blue-50 text-blue-700 border border-blue-200">
+              {editOfferId ? (language === 'de' ? 'Angebot bearbeiten' : 'Editing Offer') : (language === 'de' ? 'Angebots-Editor' : 'New Offer Builder')}
             </span>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-              {editOfferId ? `${language === 'de' ? 'Angebot' : 'Offer'} #${offerNumber}` : (language === 'de' ? 'Neues Angebot erstellen' : 'Create New Offer')}
-            </h2>
+            <span className="text-xs font-mono font-bold text-slate-700">
+              #{businessProfile.offerPrefix || 'OFF-'}{offerNumber}
+            </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            {language === 'de' ? 'Erstellen Sie ein verbindliches Fensterangebot mit 1-zu-1 Übernahme in Rechnungen' : 'Create architectural window offers with 1-to-1 conversion into active invoices'}
+            {language === 'de' ? 'Erstellen Sie Architekturfenster-Angebote mit 1-zu-1-Umwandlung' : 'Create architectural window offers with 1-to-1 conversion into active invoices'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {editOfferId && (
-            <button
-              onClick={handleConvertToInvoiceClick}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>{t.offers.convertToInvoice}</span>
-            </button>
-          )}
-
           <button
             onClick={() => setIsPreviewModalOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
@@ -372,7 +373,8 @@ export const OfferBuilderView: React.FC<OfferBuilderViewProps> = ({ editOfferId 
 
           <button
             onClick={() => handleSaveOffer('draft')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+            disabled={isGeneratingPdf}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{language === 'de' ? 'Angebot speichern' : 'Save Offer'}</span>
@@ -794,11 +796,20 @@ export const OfferBuilderView: React.FC<OfferBuilderViewProps> = ({ editOfferId 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => generatePdfFromElement('offer-pdf-element', `Offer_${offerNumber}.pdf`)}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{language === 'de' ? 'PDF Herunterladen' : 'Download PDF'}</span>
+                  {isGeneratingPdf ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {isGeneratingPdf
+                      ? (language === 'de' ? 'PDF wird erstellt...' : 'Generating PDF...')
+                      : (language === 'de' ? 'PDF Herunterladen' : 'Download PDF')}
+                  </span>
                 </button>
                 <button
                   type="button"

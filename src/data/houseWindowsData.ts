@@ -3,9 +3,12 @@ import { Product, InvoiceItem } from '../types';
 export interface HouseWindowSpec {
   id: string;
   name: string;
+  nameDe?: string;
   category: 'operable' | 'fixed' | 'architectural' | 'roof_overhead' | 'projecting' | 'geometric' | 'folding_pass_through' | 'specialty';
   openingMechanism: string;
+  openingMechanismDe?: string;
   description: string;
+  descriptionDe?: string;
   architecturalStyles: string[];
   standardSizes: {
     widthRangeInches: string;
@@ -28,13 +31,64 @@ export interface HouseWindowSpec {
   defaultGlazing: string[];
 }
 
+export function getWindowName(spec: HouseWindowSpec, lang: string = 'de'): string {
+  if (lang === 'de' && spec.nameDe) {
+    return spec.nameDe;
+  }
+  return spec.name;
+}
+
+export function getWindowDescription(spec: HouseWindowSpec, lang: string = 'de'): string {
+  if (lang === 'de' && spec.descriptionDe) {
+    return spec.descriptionDe;
+  }
+  return spec.description;
+}
+
+export function getWindowMechanism(spec: HouseWindowSpec, lang: string = 'de'): string {
+  if (lang === 'de' && spec.openingMechanismDe) {
+    return spec.openingMechanismDe;
+  }
+  return spec.openingMechanism;
+}
+
+export function getWindowCategoryLabel(category: string, lang: string = 'de'): string {
+  if (lang === 'de') {
+    switch (category) {
+      case 'operable': return 'Bedienbar / Öffnend';
+      case 'fixed': return 'Festverglasung';
+      case 'projecting': return 'Erker & Ausstellfenster';
+      case 'architectural': return 'Architektur & Sonderformen';
+      case 'roof_overhead': return 'Dach & Lichtkuppeln';
+      case 'geometric': return 'Geometrische Formen';
+      case 'folding_pass_through': return 'Falt- & Schiebesysteme';
+      case 'specialty': return 'Spezial- & Funktionsfenster';
+      default: return category;
+    }
+  }
+  switch (category) {
+    case 'operable': return 'Operable & Ventilation';
+    case 'fixed': return 'Fixed & Panoramic';
+    case 'projecting': return 'Projecting (Bay & Bow)';
+    case 'architectural': return 'Architectural & Arched';
+    case 'roof_overhead': return 'Roof & Skylights';
+    case 'geometric': return 'Geometric & Sloped';
+    case 'folding_pass_through': return 'Folding & Pass-Through';
+    case 'specialty': return 'Specialty & Leaded';
+    default: return category;
+  }
+}
+
 export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   {
     id: 'casement',
     name: 'Casement Window',
+    nameDe: 'Dreh-Kipp- / Flügelfenster',
     category: 'operable',
     openingMechanism: 'Side-hinged sash swings outward via hand crank or push bar',
+    openingMechanismDe: 'Seitlich angeschlagener Flügel öffnet nach außen per Handkurbel oder Druckgriff',
     description: 'Hinged at the side and opening outward to the left or right like a door. Delivers maximum top-to-bottom ventilation and creates the tightest compression weather seal among operable windows.',
+    descriptionDe: 'Seitlich beschlagenes Fenster, das sich wie eine Tür nach außen öffnen lässt. Bietet hervorragende Belüftung von oben bis unten und höchste Dichtigkeit.',
     architecturalStyles: ['Contemporary', 'Craftsman', 'Prairie', 'Modern Farmhouse', 'European Villa'],
     standardSizes: {
       widthRangeInches: '18" – 36"',
@@ -67,9 +121,12 @@ export const HOUSE_WINDOW_TYPES: HouseWindowSpec[] = [
   {
     id: 'double_hung',
     name: 'Double-Hung Window',
+    nameDe: 'Zweiflügeliges Schiebefenster',
     category: 'operable',
     openingMechanism: 'Both upper and lower sashes slide vertically in tracks',
+    openingMechanismDe: 'Beide Fensterflügel gleiten vertikal in separaten Führungsschienen',
     description: 'The timeless American classic. Featuring two vertically sliding sashes, allowing cool fresh air to enter through the bottom while warm indoor air escapes through the lowered top sash.',
+    descriptionDe: 'Klassisches Vertikal-Schiebefenster. Zwei bewegliche Flügel ermöglichen frische kühle Luft unten und warmen Abluftaustritt oben.',
     architecturalStyles: ['Colonial', 'Victorian', 'Cape Cod', 'Georgian', 'Craftsman', 'Traditional'],
     standardSizes: {
       widthRangeInches: '24" – 48"',

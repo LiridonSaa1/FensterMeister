@@ -51,6 +51,12 @@ import {
 
 interface AppContextType {
   supabaseConnected: boolean;
+  // Authentication
+  isAuthenticated: boolean;
+  currentUserEmail: string | null;
+  login: (email: string, pass: string) => { success: boolean; error?: string };
+  logout: () => void;
+
   // Localization
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -183,7 +189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const [language, setLanguageState] = useState<Language>(() => {
-    return (storedData?.businessProfile?.language as Language) || (initialBusinessProfile.language as Language) || 'en';
+    return (storedData?.businessProfile?.language as Language) || (initialBusinessProfile.language as Language) || 'de';
   });
 
   const setLanguage = useCallback((newLang: Language) => {
@@ -191,7 +197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBusinessProfile((prev) => ({ ...prev, language: newLang }));
   }, []);
 
-  const t = translations[language] || translations.en;
+  const t = translations[language] || translations.de;
   const [clients, setClients] = useState<Client[]>(
     storedData?.clients || initialClients
   );
@@ -207,9 +213,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [offers, setOffers] = useState<Offer[]>(
     storedData?.offers || initialOffers
   );
-  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(
-    storedData?.emailTemplates || initialEmailTemplates
-  );
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(() => {
+    if (!storedData?.emailTemplates) return initialEmailTemplates;
+    const hasEnglish = storedData.emailTemplates.some(
+      (t: EmailTemplate) =>
+        t.body?.includes('Dear ') ||
+        t.body?.includes('Hello ') ||
+        t.body?.includes('Please find attached') ||
+        t.body?.includes('Thank you for your business') ||
+        t.body?.includes('Summary of charges')
+    );
+    if (hasEnglish) return initialEmailTemplates;
+    return storedData.emailTemplates;
+  });
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>(
     storedData?.emailLogs || initialEmailLogs
   );
@@ -227,6 +243,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
     ]
   );
+
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('fenster_auth') === 'true';
+  });
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(() => {
+    return localStorage.getItem('fenster_user') || null;
+  });
+
+  const login = useCallback(
+    (email: string, pass: string) => {
+      const cleanEmail = email.trim().toLowerCase();
+      if (cleanEmail === 'fenster@meister.com' && pass === 'Drenica01') {
+        setIsAuthenticated(true);
+        setCurrentUserEmail('fenster@meister.com');
+        localStorage.setItem('fenster_auth', 'true');
+        localStorage.setItem('fenster_user', 'fenster@meister.com');
+        return { success: true };
+      } else {
+        return {
+          success: false,
+          error: language === 'de' ? 'Ungültige E-Mail-Adresse oder Passwort.' : 'Invalid email address or password.',
+        };
+      }
+    },
+    [language]
+  );
+
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
+    setCurrentUserEmail(null);
+    localStorage.removeItem('fenster_auth');
+    localStorage.removeItem('fenster_user');
+  }, []);
 
   // Supabase Hydration State
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
@@ -319,6 +369,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saveBusinessProfileToSupabase(updated);
       return updated;
     });
+
+    // Dynamically update all existing offers and invoices when design settings change
+    if (profile.invoiceTemplate) {
+      setOffers((prev) => prev.map((o) => ({ ...o, template: profile.invoiceTemplate })));
+      setInvoices((prev) => prev.map((inv) => ({ ...inv, template: profile.invoiceTemplate })));
+    }
+    if (profile.invoiceColors) {
+      setOffers((prev) => prev.map((o) => ({ ...o, primaryColor: profile.invoiceColors })));
+      setInvoices((prev) => prev.map((inv) => ({ ...inv, primaryColor: profile.invoiceColors })));
+    }
+    if (profile.font) {
+      setOffers((prev) => prev.map((o) => ({ ...o, font: profile.font })));
+      setInvoices((prev) => prev.map((inv) => ({ ...inv, font: profile.font })));
+    }
+
     showToast('Business profile updated successfully!');
   };
 
@@ -1072,6 +1137,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         supabaseConnected,
+        isAuthenticated,
+        currentUserEmail,
+        login,
+        logout,
         language,
         setLanguage,
         t,

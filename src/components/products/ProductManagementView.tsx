@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Package,
   Plus,
@@ -52,6 +52,7 @@ export const ProductManagementView: React.FC = () => {
     businessProfile,
     setCurrentTab,
     setSelectedInvoiceId,
+    language,
   } = useApp();
 
   const currency = businessProfile.defaultCurrency || 'USD';
@@ -61,7 +62,13 @@ export const ProductManagementView: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<'all' | 'product' | 'service' | 'windows'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived'>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
+    return (localStorage.getItem('fenstermeister_products_view_mode') as any) || 'cards';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('fenstermeister_products_view_mode', viewMode);
+  }, [viewMode]);
   const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc' | 'margin' | 'stock'>('name');
 
   // Modals & Drawers
@@ -1202,60 +1209,143 @@ export const ProductManagementView: React.FC = () => {
 
               {/* TAB 2: PRICING & MARGINS */}
               {activeTabInModal === 'pricing' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-5">
+                  {/* Auto Calc Banner & Helper */}
+                  <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between text-xs">
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        Retail Selling Price ({currency}) *
-                      </label>
+                      <p className="font-bold text-blue-950">
+                        {language === 'de' ? 'Smart-Preishelfer' : 'Smart Price Helper'}
+                      </p>
+                      <p className="text-[11px] text-blue-800">
+                        {language === 'de'
+                          ? 'Geben Sie den Verkaufspreis ein – Einkaufspreis & Großhandelspreis werden automatisch berechnet!'
+                          : 'Enter Retail Selling Price — Cost & Wholesale prices auto-calculate if needed!'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sell = Number(formSellingPrice) || 0;
+                        setFormCostPrice(Math.round(sell * 0.55));
+                        setFormWholesalePrice(Math.round(sell * 0.82));
+                        showToast(language === 'de' ? 'Preise automatisch berechnet (Einkauf 55%, Großhandel 82%)' : 'Auto-calculated cost (55%) & wholesale (82%)');
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
+                    >
+                      ⚡ {language === 'de' ? 'Auto-Berechnen' : 'Auto-Calculate All'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Retail Selling Price (Primary) */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="font-bold text-slate-900">
+                          Retail Selling Price ({currency}) *
+                        </label>
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Primary Invoice Price
+                        </span>
+                      </div>
                       <input
                         type="number"
                         step="0.01"
                         required
                         value={formSellingPrice}
-                        onChange={(e) => setFormSellingPrice(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2.5 bg-white border border-blue-500 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono font-bold text-sm"
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setFormSellingPrice(val);
+                          // Auto update cost & wholesale if they are default or empty
+                          if (formCostPrice === 0 || formCostPrice === Math.round(formSellingPrice * 0.55)) {
+                            setFormCostPrice(Math.round(val * 0.55));
+                          }
+                          if (formWholesalePrice === 0 || formWholesalePrice === Math.round(formSellingPrice * 0.82)) {
+                            setFormWholesalePrice(Math.round(val * 0.82));
+                          }
+                        }}
+                        className="w-full px-3.5 py-2.5 bg-white border-2 border-blue-500 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono font-black text-base text-slate-900 shadow-2xs"
                       />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {language === 'de'
+                          ? 'Hauptpreis für Angebote & Rechnungen an Kunden'
+                          : 'Main price charged to retail customers on offers & invoices'}
+                      </p>
                     </div>
 
+                    {/* VAT / Tax Rate */}
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        Cost / Purchase Price ({currency})
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={formCostPrice}
-                        onChange={(e) => setFormCostPrice(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-slate-700"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        Contractor / Wholesale Price ({currency})
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={formWholesalePrice}
-                        onChange={(e) => setFormWholesalePrice(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">VAT / Tax Rate (%)</label>
+                      <label className="block font-bold text-slate-800 mb-1">VAT / Tax Rate (%)</label>
                       <input
                         type="number"
                         step="0.1"
                         value={formVatRate}
                         onChange={(e) => setFormVatRate(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono"
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono font-bold text-slate-900"
                       />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {language === 'de' ? 'Standard Steuer (z. B. 19% oder 20%)' : 'Standard tax rate applied to this item'}
+                      </p>
                     </div>
 
-                    <div>
+                    {/* Cost / Purchase Price */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="font-bold text-slate-700 text-xs">
+                          Cost / Purchase Price ({currency})
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFormCostPrice(Math.round(formSellingPrice * 0.55))}
+                          className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer bg-white px-2 py-0.5 rounded border border-blue-200"
+                        >
+                          Auto (55%)
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formCostPrice}
+                        onChange={(e) => setFormCostPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-slate-800 text-xs font-bold"
+                      />
+                      <p className="text-[10px] text-slate-500">
+                        {language === 'de'
+                          ? 'Einkaufspreis vom Lieferanten (optional, für Gewinnspanne)'
+                          : 'Internal supplier cost (optional, used to measure profit margin)'}
+                      </p>
+                    </div>
+
+                    {/* Contractor / Wholesale Price */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="font-bold text-slate-700 text-xs">
+                          Contractor / Wholesale Price ({currency})
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFormWholesalePrice(Math.round(formSellingPrice * 0.82))}
+                          className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer bg-white px-2 py-0.5 rounded border border-blue-200"
+                        >
+                          Auto (82%)
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formWholesalePrice}
+                        onChange={(e) => setFormWholesalePrice(parseFloat(e.target.value) || 0)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-slate-800 text-xs font-bold"
+                      />
+                      <p className="text-[10px] text-slate-500">
+                        {language === 'de'
+                          ? 'Rabattpreis für B2B-Partner & Handwerker (optional)'
+                          : 'Special discounted rate for B2B trade & contractors (optional)'}
+                      </p>
+                    </div>
+
+                    {/* Default Discount */}
+                    <div className="sm:col-span-2">
                       <label className="block font-bold text-slate-700 mb-1">Default Discount (%)</label>
                       <input
                         type="number"
@@ -1263,7 +1353,7 @@ export const ProductManagementView: React.FC = () => {
                         max="100"
                         value={formDiscount}
                         onChange={(e) => setFormDiscount(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono"
+                        className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-xs"
                       />
                     </div>
                   </div>
