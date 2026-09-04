@@ -70,6 +70,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
       label: t.nav.emailHistory,
       icon: <Mail className="w-4 h-4" />,
     },
+    {
+      id: 'settings',
+      label: t.nav.settings,
+      icon: <Settings className="w-4 h-4" />,
+    },
   ];
 
   const handleNavClick = (tab: NavigationTab) => {

@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Sparkles,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NavigationTab } from '../../types';
@@ -221,6 +222,17 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onToggleMobileMenu }) => {
           <div className="w-9 h-9 bg-slate-900 text-white rounded-full border-2 border-white shadow-sm flex items-center justify-center font-bold text-xs">
             FM
           </div>
+
+          {/* Settings Quick Button */}
+          <button
+            onClick={() => setCurrentTab('settings')}
+            className={`p-2 rounded-xl transition-colors cursor-pointer ${
+              currentTab === 'settings' ? 'text-blue-600 bg-blue-50 font-bold' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+            title={t.settings.title}
+          >
+            <Settings className="w-4 h-4" />
+          </button>
 
           {/* Logout Button */}
           <button
